@@ -942,7 +942,13 @@
 	// to do it. Pinned to one version, which cannot change under us; it is
 	// read as numbers and never as code, and a globe that never receives it
 	// keeps its graticule, its sightings and its list.
-	const ATLAS = "https://cdn.jsdelivr.net/npm/world-atlas@2.0.2/land-110m.json";
+	//
+	// Served from this site rather than a CDN. It is 55KB, and this is shown
+	// on conference wifi: a third-party fetch that times out would leave the
+	// globe without a coastline, which is most of what makes it readable.
+	// The file is world-atlas 2.0.2's land-110m.json, built from Natural
+	// Earth, which is public domain.
+	const ATLAS = "/assets/data/land-110m.json";
 
 	const coastline = (topo) => {
 		const { scale, translate } = topo.transform;
