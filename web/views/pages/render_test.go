@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"io"
+	"os"
 	"regexp"
 	"strings"
 	"testing"
@@ -782,4 +783,36 @@ func TestGophers_AreDecorationOnly(t *testing.T) {
 	// Drawn, not typed: an emoji gopher is a glyph standing in for an icon.
 	assert.NotContains(t, html, "🐿")
 	assert.NotContains(t, html, "🦫")
+}
+
+// The sticky bar is pinned over the map on a phone, so its height is the
+// map's cost: at 320px it wrapped to four rows, 183px, and covered the map.
+// Layout cannot be measured from a render, so this pins what keeps the bar to
+// two rows: the readout the small-phone rule clips is still in the bar and
+// still announced, and the stylesheet clips it rather than removing it.
+func TestQuestion_KeepsTheBarShortOnASmallPhoneWithoutDroppingAReadout(t *testing.T) {
+	t.Parallel()
+
+	html := renderQuestion(t, game.New([]uuid.UUID{uuid.New()}))
+
+	bar := regexp.MustCompile(`(?s)<div class="guess__bar">(.*?)</div>`).FindStringSubmatch(html)
+	require.Len(t, bar, 2, "the action bar should hold the readouts and both buttons")
+
+	// The clipped readout is the one with the id the stylesheet names.
+	crosshair := regexp.MustCompile(`<p[^>]*id="crosshair-readout"[^>]*>`).FindString(bar[1])
+	require.NotEmpty(t, crosshair, "the crosshair readout lives in the bar")
+	assert.Contains(t, crosshair, `aria-live="polite"`, "clipped, it must still be announced")
+	assert.Contains(t, bar[1], `id="guess-readout"`)
+	assert.Contains(t, bar[1], "data-drop-centre")
+	assert.Contains(t, bar[1], `id="guess-submit"`)
+
+	css, err := os.ReadFile("../../assets/css/app.css")
+	require.NoError(t, err)
+
+	small := regexp.MustCompile(`(?s)@media \(max-width: 30rem\) \{(.*?)\n\}`).FindStringSubmatch(string(css))
+	require.Len(t, small, 2, "the stylesheet should have a small-phone block")
+	clip := regexp.MustCompile(`(?s)\.guess__bar #crosshair-readout \{(.*?)\}`).FindStringSubmatch(small[1])
+	require.Len(t, clip, 2, "the small-phone block should shrink the crosshair readout")
+	assert.Contains(t, clip[1], "clip-path", "clipped, not removed")
+	assert.NotContains(t, clip[1], "display: none", "display:none would drop it from the accessibility tree")
 }

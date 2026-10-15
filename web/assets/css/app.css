@@ -1767,6 +1767,70 @@ a:hover {
 	}
 }
 
+/* A small phone. At 320px the bar's four parts each took a row (a readout
+   each, then a button each), which made it 183px tall and clamped it over
+   the whole map. One readout and two buttons that share a row is about 94px.
+   The crosshair readout is clipped, not removed, so a screen reader still
+   hears it and the map still shows the crosshair itself; the pin readout is
+   the one a player decides on. */
+@media (max-width: 30rem) {
+	.guess__bar #crosshair-readout {
+		position: absolute;
+		width: 1px;
+		height: 1px;
+		margin: -1px;
+		padding: 0;
+		overflow: hidden;
+		clip-path: inset(50%);
+		white-space: nowrap;
+	}
+
+	.guess__bar .button {
+		min-height: 2.75rem;
+		padding: 0.5rem 0.6rem;
+		font-size: 0.9rem;
+	}
+}
+
+/* A short portrait phone (an iPhone SE, a 320px Android): the bar is only
+   half of it. The photograph and the map have to share what is left, and the
+   map must keep at least 120px above the pinned bar with its crosshair in
+   view, so the photograph gives up height first (it links to the full-size
+   image) and the map keeps a floor it cannot fall below. */
+@media (max-width: 60rem) and (max-height: 44rem) and (orientation: portrait) {
+	.plate__photo {
+		max-height: 22vh;
+	}
+
+	.guess .map {
+		aspect-ratio: 16 / 10;
+		min-height: 13.5rem;
+	}
+
+	.is-playing .masthead {
+		gap: 0 1rem;
+		padding-block: 0.4rem;
+	}
+
+	.is-playing .nav a {
+		padding-block: 0.35rem;
+	}
+
+	.is-playing .scoreboard {
+		gap: 0.3rem 0.8rem;
+		margin: 0.5rem 0;
+		padding-bottom: 0.4rem;
+	}
+
+	.welcome {
+		margin-bottom: 0.4rem;
+	}
+
+	.round {
+		gap: 0.6rem;
+	}
+}
+
 /* A short viewport, such as a phone on its side: the pinned bar would
    cross the map's top edge, so let it flow, and size the map to the height. */
 @media (max-height: 30rem) {
