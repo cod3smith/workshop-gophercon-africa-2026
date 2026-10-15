@@ -46,4 +46,20 @@ func TestQuestion_OffersAGuessWithoutTheMap(t *testing.T) {
 		assert.Contains(t, input, `type="number"`)
 		assert.NotContains(t, input, `type="hidden"`)
 	}
+
+	// Half the world is negative. iOS's decimal keypad has no minus sign, so
+	// inputmode="decimal" would make every southern or western guess, which
+	// is most of Africa, impossible to type on an iPhone. type="number"
+	// already picks a keyboard that has one.
+	assert.Contains(t, inputNamed(html, "lat"), `min="-90"`)
+	assert.Contains(t, inputNamed(html, "lng"), `min="-180"`)
+	assert.NotContains(t, inputNamed(html, "lat"), `inputmode="decimal"`)
+	assert.NotContains(t, inputNamed(html, "lng"), `inputmode="decimal"`)
+
+	// With no JavaScript nothing can enable the button, so it has to be
+	// enabled when the page arrives. safari.js disables it while the fields
+	// are empty.
+	submit := regexp.MustCompile(`<button[^>]*id="guess-submit"[^>]*>`).FindString(html)
+	require.NotEmpty(t, submit, "the form should carry the submit button")
+	assert.NotContains(t, submit, "disabled")
 }
