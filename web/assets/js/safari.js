@@ -184,6 +184,15 @@
 			typed.open = false;
 		}
 
+		// The first-round greeting ships open. On a short phone, open it would
+		// push the map under the pinned bar, so it folds to its summary strip,
+		// still visible and one keypress from open. Only now that there is a
+		// map to protect: with none, it stays open for the player who needs it.
+		const welcome = document.querySelector("details.welcome");
+		if (welcome && window.matchMedia("(max-width: 60rem) and (max-height: 52rem)").matches) {
+			welcome.open = false;
+		}
+
 		// Both are useless without a live map, so the page ships them hidden
 		// and they appear only once there is something to aim at.
 		if (crosshair) {

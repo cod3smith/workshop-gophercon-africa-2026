@@ -87,7 +87,7 @@ func TestQuestion_ShipsTheTypedRouteOpenAndLeavesClosingItToTheMap(t *testing.T)
 	// has nothing to unfold it with; shipping it closed and opening it from
 	// script would lock out exactly the people it exists for. So safari.js
 	// closes it after the map is built, and the markup says open.
-	fold := regexp.MustCompile(`(?s)<details[^>]*\sopen(?:[\s=][^>]*)?>.*?</details>`).FindString(html)
+	fold := regexp.MustCompile(`(?s)<details[^>]*class="coords"[^>]*\sopen(?:[\s=][^>]*)?>.*?</details>`).FindString(html)
 	require.NotEmpty(t, fold, "the typed route should be a <details> that ships open")
 	assert.Contains(t, fold, `id="lat"`)
 	assert.Contains(t, fold, `id="lng"`)
@@ -668,20 +668,21 @@ func TestQuestion_GreetsAFirstTimerOnRoundOneOnly(t *testing.T) {
 
 	first := renderQuestion(t, game.New([]uuid.UUID{uuid.New()}))
 
-	welcome := regexp.MustCompile(`(?s)<section[^>]*class="welcome"[^>]*>(.*?)</section>`).FindStringSubmatch(first)
-	require.Len(t, welcome, 2, "a fresh game should open with a greeting")
+	welcome := regexp.MustCompile(`(?s)<details[^>]*class="welcome"[^>]*\sopen(?:[\s=][^>]*)?>(.*?)</details>`).FindStringSubmatch(first)
+	require.Len(t, welcome, 2, "a fresh game should open with a greeting that ships open")
 
-	// The three ways to answer, and what scores.
-	for _, want := range []string{"Tap the map", "crosshair", "latitude and longitude", "nearer"} {
+	// It names the task, so "closer" has something to be close to, and it
+	// is true for a player with no map: the typed route is the fallback it
+	// names, and the pointer and crosshair are tied to the map.
+	for _, want := range []string{"Where on earth was this animal seen", "Tap the map", "crosshair", "With no map, type a latitude and longitude", "nearer"} {
 		assert.Contains(t, welcome[1], want)
 	}
 
-	// It can be put away, and that has to work with no JavaScript: a hidden
-	// checkbox outside the guess form (so it is never submitted) that
-	// hides the greeting through CSS when it is checked.
-	assert.Regexp(t, `<input[^>]*type="checkbox"[^>]*id="welcome-dismiss"`, first)
-	assert.Contains(t, welcome[1], `for="welcome-dismiss"`)
-	assert.Less(t, strings.Index(first, `id="welcome-dismiss"`), strings.Index(first, `<form`), "the dismiss control must not be inside the guess form")
+	// Folded, it is a one-line strip a person can still see, focus and
+	// reopen with Enter or Space, which a native <details> gives for free
+	// and with no JavaScript.
+	assert.Regexp(t, `(?s)<summary[^>]*>\s*How to play\s*</summary>`, welcome[1])
+	assert.NotContains(t, first, "welcome-dismiss", "no hidden checkbox stranding focus")
 
 	// It follows the rules line and precedes the form, so the photograph,
 	// the map and the clues keep the order Task 2 gave them.
@@ -691,7 +692,6 @@ func TestQuestion_GreetsAFirstTimerOnRoundOneOnly(t *testing.T) {
 	// From round two the game is already in the player's hands.
 	second := renderQuestion(t, secondRound())
 	assert.NotContains(t, second, `class="welcome"`)
-	assert.NotContains(t, second, "welcome-dismiss")
 	assert.Contains(t, second, `class="rules"`, "the rules line is for every round")
 }
 

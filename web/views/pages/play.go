@@ -298,6 +298,25 @@ func (p OverProps) playedPlace(i int) string {
 	return place(s.Location)
 }
 
+// numberWords spells out the counts a sentence can use, so the rules read
+// "Five rounds" and follow game.Rounds rather than repeating it.
+var numberWords = []string{"zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"}
+
+// roundsWord is how many rounds a game has, in words.
+func roundsWord() string {
+	if game.Rounds < len(numberWords) {
+		return numberWords[game.Rounds]
+	}
+	return strconv.Itoa(game.Rounds)
+}
+
+// rules is the line that says what the game is, on every round: how many
+// rounds, that closeness is what scores, and what a perfect round is worth.
+func rules() string {
+	word := roundsWord()
+	return fmt.Sprintf("%s%s rounds. Closer pins score more, up to %s a round.", strings.ToUpper(word[:1]), word[1:], thousands(game.MaxRoundScore))
+}
+
 // roundLabel names the round being shown. The caller says which, because
 // the answer page is headed by the round just played while the question
 // page is headed by the one being asked.
