@@ -3,6 +3,7 @@ package pages_test
 import (
 	"bytes"
 	"context"
+	"io"
 	"regexp"
 	"strings"
 	"testing"
@@ -711,4 +712,74 @@ func TestHome_ExplainsHowTheGameWorksBeneathTheCall(t *testing.T) {
 	}
 
 	assert.Less(t, strings.Index(html, `class="hero__actions"`), strings.Index(html, `class="steps"`), "the steps sit beneath the call to play")
+}
+
+// renderTo renders a component to a string.
+func renderTo(t *testing.T, c interface {
+	Render(context.Context, io.Writer) error
+}) string {
+	t.Helper()
+
+	var buf bytes.Buffer
+	require.NoError(t, c.Render(context.Background(), &buf))
+	return buf.String()
+}
+
+// The gophers are the product's one moment of pure character, so they
+// live where the page is quiet: the 404, the empty record, the footer of
+// the record, and the answer once a guess is scored.
+func TestGophers_AppearWhereThePageIsQuiet(t *testing.T) {
+	t.Parallel()
+
+	recorded := sighting.Sighting{
+		ID:       uuid.New(),
+		Location: sighting.Location{Coordinates: sighting.Coordinates{Latitude: -1.29, Longitude: 36.82}},
+	}
+
+	pagesWithGophers := map[string]string{
+		"the 404":         renderTo(t, pages.Error("No such page.", 404)),
+		"the empty state": renderTo(t, pages.Home(nil)),
+		"the footer":      renderTo(t, pages.Home([]sighting.Sighting{recorded})),
+		"the answer":      answered(t),
+	}
+	for name, html := range pagesWithGophers {
+		assert.Contains(t, html, `class="gopher`, name+" should have a gopher")
+	}
+
+	// One gopher at a time on the record: the empty state has its own, so
+	// the footer's would make two of them where there is least to look at.
+	assert.Equal(t, 1, strings.Count(pagesWithGophers["the empty state"], `<svg class="gopher`))
+	assert.Equal(t, 1, strings.Count(pagesWithGophers["the 404"], `<svg class="gopher`), "the 404 has its own gopher, not the footer's as well")
+}
+
+// Attention on the round belongs to the photograph and the map, which is
+// what the player is scored on reading. Nothing runs beside the evidence.
+func TestGophers_NeverRunOnTheRound(t *testing.T) {
+	t.Parallel()
+
+	for name, g := range map[string]game.Game{
+		"the first round": game.New([]uuid.UUID{uuid.New(), uuid.New(), uuid.New(), uuid.New(), uuid.New()}),
+		"a later round":   secondRound(),
+	} {
+		html := renderQuestion(t, g)
+		assert.NotContains(t, html, `gopher`, name+" must carry no gopher, not even in the footer")
+	}
+}
+
+// The gophers are decoration: never announced, never focusable.
+func TestGophers_AreDecorationOnly(t *testing.T) {
+	t.Parallel()
+
+	html := renderTo(t, pages.Error("No such page.", 404)) + renderTo(t, pages.Home(nil)) + answered(t)
+
+	svgs := regexp.MustCompile(`<svg[^>]*class="gopher[^>]*>`).FindAllString(html, -1)
+	require.NotEmpty(t, svgs)
+	for _, svg := range svgs {
+		assert.Contains(t, svg, `aria-hidden="true"`)
+		assert.Contains(t, svg, `focusable="false"`)
+	}
+
+	// Drawn, not typed: an emoji gopher is a glyph standing in for an icon.
+	assert.NotContains(t, html, "🐿")
+	assert.NotContains(t, html, "🦫")
 }

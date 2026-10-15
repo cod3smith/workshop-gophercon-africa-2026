@@ -4,6 +4,7 @@ import (
 	"strconv"
 	"workshop/internal/domain/game"
 	"workshop/internal/domain/sighting"
+	"workshop/web/views/components"
 	"workshop/web/views/layout"
 )
 
@@ -11,6 +12,8 @@ templ Home(sightings []sighting.Sighting) {
 	@layout.Base(layout.BaseProps{
 		Title:       "The record",
 		Description: "Occurrence records of wild animals, and a game: look at the photograph and guess where on earth it was taken.",
+		// The empty record has a gopher of its own, so the footer waits.
+		FooterGopher: len(sightings) > 0,
 	}) {
 		{{ summary := sighting.Summarise(sightings) }}
 		<section class="hero">
@@ -66,10 +69,13 @@ templ Home(sightings []sighting.Sighting) {
 				}
 			</header>
 			if len(sightings) == 0 {
-				<p class="empty">
-					Nothing has been ingested yet. Run <code>go run . db seed</code> and
-					reload this page.
-				</p>
+				<div class="empty">
+					@components.GopherPeek()
+					<p>
+						Nothing has been ingested yet. Run <code>go run . db seed</code> and
+						reload this page.
+					</p>
+				</div>
 			} else {
 				<ul class="tiles">
 					for _, s := range tiles(sightings) {

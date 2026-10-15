@@ -500,10 +500,17 @@ a:hover {
 }
 
 .empty {
-	padding: 2.5rem;
+	display: grid;
+	justify-items: center;
+	gap: 0.75rem;
+	padding: 2rem 2.5rem 2.5rem;
 	border: 1px dashed var(--line);
 	color: var(--paper-dim);
 	text-align: center;
+}
+
+.empty p {
+	margin: 0;
 }
 
 .empty code {
@@ -1381,6 +1388,242 @@ a:hover {
 	letter-spacing: 0.08em;
 	text-transform: uppercase;
 	opacity: 0.7;
+}
+
+/* --- Gophers ------------------------------------------------------------
+   Decoration, and only where the page is quiet: the 404, the empty record,
+   the foot of the record and a scored answer. Never the round, where the
+   photograph and the map are what is being read.
+
+   Every gopher is drawn from the tokens above and its base style is where it
+   STANDS. An animation only carries it there, from off the edge of its lane,
+   and without fill-mode `forwards` it hands back to the base style when it
+   ends - so reduced motion, which cancels the animation, finds the gopher
+   standing at rest rather than parked mid-run beyond the viewport.
+
+   transform and opacity only: nothing here lays out per frame. */
+
+.gopher {
+	display: block;
+	width: 3rem;
+	height: auto;
+	overflow: visible;
+}
+
+.gopher__fur {
+	fill: var(--paper-dim);
+}
+
+.gopher__ear,
+.gopher__leg--a rect {
+	fill: var(--edge);
+}
+
+.gopher__leg--b rect {
+	fill: var(--line);
+}
+
+.gopher__tail {
+	fill: none;
+	stroke: var(--edge);
+	stroke-width: 2.4;
+	stroke-linecap: round;
+}
+
+.gopher__eye {
+	fill: var(--paper);
+}
+
+.gopher__pupil,
+.gopher__nose {
+	fill: var(--ink);
+}
+
+.gopher__muzzle {
+	fill: var(--paper);
+	fill-opacity: 0.45;
+}
+
+.gopher__tooth {
+	fill: var(--paper);
+	stroke: var(--ink);
+	stroke-width: 0.6;
+}
+
+.gopher__gap {
+	fill: none;
+	stroke: var(--ink);
+	stroke-width: 0.5;
+}
+
+.gopher__mound {
+	fill: var(--surface);
+	stroke: var(--edge);
+	stroke-width: 1;
+	stroke-linejoin: round;
+}
+
+/* The stage a gopher runs along. It is clear of whatever it runs beside,
+   and cannot be clicked, so it never stands between a player and a button. */
+.gopher-lane {
+	--run: 100cqw;       /* how far off to the left the run starts */
+	--time: 2.2s;        /* the whole run, ending at rest */
+	--strides: 9;        /* half-strides in the moving part of it */
+	position: relative;
+	height: 2.2rem;
+	overflow: hidden;
+	container-type: inline-size;
+	pointer-events: none;
+}
+
+.gopher-lane .gopher {
+	position: absolute;
+	bottom: 0;
+}
+
+/* Footer: standing on the footer's rule, at the end of the column. */
+.gopher-lane--footer {
+	--time: 3.2s;
+	--strides: 12;
+	margin-top: 2.5rem;
+}
+
+.gopher-lane--footer .gopher {
+	right: max(var(--gutter), calc(50% - 38rem + var(--gutter)));
+}
+
+/* 404: it ran in, and now sits over the number it could not find. The lane
+   fades at both ends so the gopher arrives rather than emerging from an
+   invisible edge. */
+.gopher-lane--oops,
+.gopher-lane--result {
+	-webkit-mask-image: linear-gradient(90deg, transparent, black 12%, black 88%, transparent);
+	mask-image: linear-gradient(90deg, transparent, black 12%, black 88%, transparent);
+}
+
+.gopher-lane--oops {
+	--run: 55cqw;
+	--time: 1.8s;
+	--strides: 6;
+	margin-bottom: 0.5rem;
+}
+
+.gopher-lane--oops .gopher {
+	left: calc(50% - 1.5rem);
+}
+
+/* Answer: scampers across above the verdict, once the guess is scored, and
+   stops on the top edge of it. Its height is taken out of the gap above the
+   verdict, so the animal underneath does not move down the screen for it. */
+.gopher-lane--result {
+	--run: 92cqw;
+	--time: 2.2s;
+	--strides: 8;
+	height: 1.9rem;
+	margin-bottom: -1.5rem;
+}
+
+.gopher-lane--result .gopher {
+	right: 8%;
+	width: 2.6rem;
+}
+
+.gopher--run {
+	animation: gopher-run var(--time) linear backwards;
+}
+
+.gopher--run .gopher__bob {
+	animation: gopher-bob calc(var(--time) * 0.88 / var(--strides)) ease-in-out var(--strides) alternate backwards;
+}
+
+.gopher--run .gopher__leg {
+	transform-box: fill-box;
+	transform-origin: 50% 8%;
+	animation: gopher-stride calc(var(--time) * 0.88 / var(--strides)) ease-in-out var(--strides) alternate backwards;
+}
+
+.gopher--run .gopher__leg--b {
+	animation-direction: alternate-reverse;
+}
+
+@keyframes gopher-run {
+	from {
+		transform: translateX(calc(var(--run) * -1));
+	}
+
+	88%,
+	to {
+		transform: translateX(0);
+	}
+}
+
+@keyframes gopher-bob {
+	to {
+		transform: translateY(-1.4px);
+	}
+}
+
+@keyframes gopher-stride {
+	from {
+		transform: rotate(-32deg);
+	}
+
+	to {
+		transform: rotate(32deg);
+	}
+}
+
+/* The footer is below the fold on most pages, so a run that plays on load is
+   a run nobody sees. Where the browser can tie it to the scroll, the gopher
+   runs in as the footer arrives. Elsewhere it simply stands there. */
+@supports (animation-timeline: view()) {
+	.gopher-lane--footer {
+		view-timeline-name: --footer-lane;
+	}
+
+	.gopher-lane--footer .gopher--run,
+	.gopher-lane--footer .gopher--run .gopher__bob,
+	.gopher-lane--footer .gopher--run .gopher__leg {
+		animation-timeline: --footer-lane;
+		animation-range: entry 0% cover 12%;
+	}
+
+	.gopher-lane--footer .gopher--run {
+		animation-duration: auto;
+	}
+
+	.gopher-lane--footer .gopher--run .gopher__bob,
+	.gopher-lane--footer .gopher--run .gopher__leg {
+		animation-duration: auto;
+		animation-iteration-count: var(--strides);
+	}
+}
+
+/* Empty record: it looks up out of the ground and stays. */
+.gopher--peek {
+	width: 4.5rem;
+}
+
+.gopher--peek .gopher__rise {
+	animation: gopher-rise 0.7s cubic-bezier(0.2, 0.8, 0.3, 1) 0.3s backwards;
+}
+
+@keyframes gopher-rise {
+	from {
+		transform: translateY(26px);
+	}
+}
+
+/* Reduced motion: no run, no stride, no rise. Cancelling the animations
+   (not shortening them) leaves each gopher in its base style, which is
+   standing in view at its resting place. */
+@media (prefers-reduced-motion: reduce) {
+	.gopher--run,
+	.gopher--run .gopher__bob,
+	.gopher--run .gopher__leg,
+	.gopher--peek .gopher__rise {
+		animation: none;
+	}
 }
 
 /* --- Narrow screens ----------------------------------------------------- */

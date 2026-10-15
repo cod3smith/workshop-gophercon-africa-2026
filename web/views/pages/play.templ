@@ -3,6 +3,7 @@ package pages
 import (
 	"strconv"
 	"workshop/internal/domain/game"
+	"workshop/web/views/components"
 	"workshop/web/views/layout"
 )
 
@@ -206,6 +207,14 @@ templ Answer(props AnswerProps) {
 	}) {
 		@scoreboard(props.Game, len(props.Game.Results))
 		<section class="result">
+			<!--
+				The one place the game lets a gopher run: after the verdict is in, above
+				the answer and clear of it. It is never on the question, where the
+				photograph and the map are what is being read.
+			-->
+			<div class="gopher-lane gopher-lane--result" aria-hidden="true">
+				@components.Gopher("gopher--run")
+			</div>
 			<header class={ "result__head", ToneFor(props.Result.Points) }>
 				<p class="result__verdict">{ verdict(props.Result.DistanceKm) }</p>
 				<p class="result__distance">{ distanceLabel(props.Result.DistanceKm) }</p>

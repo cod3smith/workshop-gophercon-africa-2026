@@ -1,5 +1,7 @@
 package layout
 
+import "workshop/web/views/components"
+
 type BaseProps struct {
 	// Title goes in the tab and in the page's own metadata.
 	Title string
@@ -11,6 +13,10 @@ type BaseProps struct {
 	Map bool
 	// Class marks the body, so a page can restyle the chrome around it.
 	Class string
+	// FooterGopher sends a gopher along the top of the footer. It is
+	// opt-in, and off wherever the page is working: the game never sets it,
+	// because attention there belongs to the photograph and the map.
+	FooterGopher bool
 }
 
 templ Base(props BaseProps) {
@@ -61,6 +67,11 @@ templ Base(props BaseProps) {
 			<main id="main" class="container">
 				{ children... }
 			</main>
+			if props.FooterGopher {
+				<div class="gopher-lane gopher-lane--footer" aria-hidden="true">
+					@components.Gopher("gopher--run")
+				</div>
+			}
 			<footer class="footer">
 				<p>
 					Occurrence records from <a href="https://www.gbif.org" rel="noopener">GBIF</a>,

@@ -2,6 +2,7 @@ package pages
 
 import (
 	"strconv"
+	"workshop/web/views/components"
 	"workshop/web/views/layout"
 )
 
@@ -11,6 +12,12 @@ templ Error(message string, code int) {
 		Description: message,
 	}) {
 		<section class="oops">
+			if code == 404 {
+				<!-- Only on a page that is merely missing; a fault is not the place for a joke. -->
+				<div class="gopher-lane gopher-lane--oops" aria-hidden="true">
+					@components.Gopher("gopher--run")
+				</div>
+			}
 			<p class="oops__code mono">{ strconv.Itoa(code) }</p>
 			<h1 class="oops__title">
 				if code == 404 {
