@@ -7,9 +7,24 @@ import (
 
 templ Error(message string, code int) {
 	@layout.Base(layout.BaseProps{
-		Title: "Error " + strconv.Itoa(code),
+		Title:       strconv.Itoa(code),
+		Description: "Something went wrong.",
+		Class:       "is-error",
 	}) {
-		<h1>{ strconv.Itoa(code) }</h1>
-		<p>{ message }</p>
+		<section class="oops">
+			<p class="oops__code mono">{ strconv.Itoa(code) }</p>
+			<h1 class="oops__title">
+				if code == 404 {
+					Nothing was recorded here
+				} else {
+					Something went wrong
+				}
+			</h1>
+			<p class="oops__message">{ message }</p>
+			<div class="oops__actions">
+				<a class="button button--primary" href="/">Back to the record</a>
+				<a class="button" href="/play">Play instead</a>
+			</div>
+		</section>
 	}
 }

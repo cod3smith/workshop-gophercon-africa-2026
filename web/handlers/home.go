@@ -16,9 +16,9 @@ func Home(logger *slog.Logger, sightings SightingsLister) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 
-		items, err := sightings.List(ctx, sighting.ListFilter{
-			Limit: 50,
-		})
+		// No limit: the figures in the hero describe the whole record, and
+		// the page renders only the most recent slice of it as tiles.
+		items, err := sightings.List(ctx, sighting.ListFilter{})
 		if err != nil {
 			logger.ErrorContext(ctx, "handlers: listing sightings: "+err.Error())
 			renderError(ctx, w, logger, http.StatusInternalServerError, "Unable to load sightings.")

@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"log/slog"
 	"uuid"
 	"workshop/internal/domain/sighting"
@@ -79,10 +78,14 @@ func (s Store) List(ctx context.Context, filter sighting.ListFilter) ([]sighting
 		return nil, err
 	}
 
+	// One line for the whole listing, with the count as an attribute, so
+	// nothing is formatted unless debug logging is actually on. Formatting
+	// a message per row — and the whole rows slice with it — made this
+	// quadratic in the number of sightings.
+	slog.DebugContext(ctx, "store: listing sightings", slog.Int("rows", len(rows)))
+
 	result := make([]sighting.Sighting, len(rows))
 	for i, row := range rows {
-		msg := fmt.Sprintf("store: listing row %d of %v", i+1, rows)
-		slog.DebugContext(ctx, msg)
 		result[i], err = transform(row)
 		if err != nil {
 			return nil, err

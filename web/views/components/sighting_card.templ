@@ -14,7 +14,7 @@ templ SightingCard(s sighting.Sighting) {
 	<article class="card">
 		<!-- Header -->
 		<header class="card__header">
-			<h2>{ displayName(s.Species) }</h2>
+			<h2>{ DisplayName(s.Species) }</h2>
 			if s.Species.ScientificName != "" {
 				<p class="card__scientific">{ s.Species.ScientificName }</p>
 			}
@@ -24,10 +24,10 @@ templ SightingCard(s sighting.Sighting) {
 			<dt>Seen</dt>
 			<dd>{ s.HappenedAt.Format("2 January 2006") }</dd>
 			<dt>Where</dt>
-			<dd>{ place(s.Location) }</dd>
+			<dd>{ Place(s.Location) }</dd>
 			if s.IndividualCount != nil {
 				<dt>Count</dt>
-				<dd>{ individuals(*s.IndividualCount) }</dd>
+				<dd>{ Individuals(*s.IndividualCount) }</dd>
 			}
 			if s.RecordedBy != "" {
 				<dt>Recorded by</dt>
@@ -41,14 +41,14 @@ templ SightingCard(s sighting.Sighting) {
 	</article>
 }
 
-// displayName prefers the name a reader would recognise, falling back
+// DisplayName prefers the name a reader would recognise, falling back
 // through the taxonomy as GBIF records thin out.
-func displayName(sp species.Species) string {
+func DisplayName(sp species.Species) string {
 	return cmp.Or(sp.VernacularName, sp.CanonicalName, sp.ScientificName, "Unknown species")
 }
 
-// place joins whichever parts of the location GBIF supplied.
-func place(l sighting.Location) string {
+// Place joins whichever parts of the location GBIF supplied.
+func Place(l sighting.Location) string {
 	parts := slices.DeleteFunc(
 		[]string{l.Locality, l.StateProvince, l.Country},
 		func(s string) bool { return s == "" },
@@ -56,8 +56,8 @@ func place(l sighting.Location) string {
 	return cmp.Or(strings.Join(parts, ", "), "Location unknown")
 }
 
-// individuals renders how many animals were seen in a single sighting.
-func individuals(n int) string {
+// Individuals renders how many animals were seen in a single sighting.
+func Individuals(n int) string {
 	if n == 1 {
 		return "1 individual"
 	}

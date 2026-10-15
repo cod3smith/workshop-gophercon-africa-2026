@@ -1,0 +1,203 @@
+package pages
+
+import (
+	"strconv"
+	"workshop/internal/domain/game"
+	"workshop/web/views/layout"
+)
+
+// Question is a photograph and an empty map: the player says where on
+// earth they think the animal was.
+templ Question(props QuestionProps) {
+	@layout.Base(layout.BaseProps{
+		Title:       roundLabel(props.Game),
+		Description: "Look at the animal. Guess where on earth it was seen. Five rounds, 25,000 points.",
+		Map:         true,
+		Class:       "is-playing",
+	}) {
+		@scoreboard(props.Game)
+		<form class="round" method="post" action="/play/guess">
+			<input type="hidden" name="round" value={ strconv.Itoa(props.Game.Round) }/>
+			<input type="hidden" name="lat" id="lat" value=""/>
+			<input type="hidden" name="lng" id="lng" value=""/>
+			<figure class="plate">
+				<img
+					class="plate__photo"
+					src={ photo(props.Sighting).URL }
+					alt="An unidentified animal, photographed in the wild"
+				/>
+				<figcaption class="plate__credit">{ credit(photo(props.Sighting)) }</figcaption>
+			</figure>
+			<section class="panel" aria-labelledby="clues-heading">
+				<h2 id="clues-heading" class="panel__title">What we know</h2>
+				<dl class="clues">
+					for _, clue := range clues(props.Sighting) {
+						<div class="clue">
+							<dt>{ clue.Label }</dt>
+							<dd>{ clue.Value }</dd>
+						</div>
+					}
+				</dl>
+				<p class="panel__hint">
+					Click the map below to drop a pin where you think it was
+					recorded. The closer you are, the more it scores.
+				</p>
+			</section>
+			<section class="guess" aria-label="Your guess">
+				<div class="map" data-safari-map="safari-map" role="application" aria-label="Click to place your guess">
+					<p class="map__fallback">
+						The map needs JavaScript and a connection. Without it you can
+						still read every sighting on <a href="/">the record</a>.
+					</p>
+				</div>
+				<div class="guess__bar">
+					<output class="field__readout" id="guess-readout" for="lat lng">No pin dropped yet</output>
+					<button class="button button--primary button--large" type="submit" id="guess-submit" disabled>
+						Lock it in
+					</button>
+				</div>
+			</section>
+		</form>
+		@templ.JSONScript("safari-map", guessMap())
+	}
+}
+
+// Answer is the round scored: how far out the guess was, and what the
+// animal turned out to be.
+templ Answer(props AnswerProps) {
+	@layout.Base(layout.BaseProps{
+		Title:       verdict(props.Result.DistanceKm),
+		Description: "Look at the animal. Guess where on earth it was seen. Five rounds, 25,000 points.",
+		Map:         true,
+		Class:       "is-playing",
+	}) {
+		@scoreboard(props.Game)
+		<section class="result">
+			<header class="result__head">
+				<p class="result__verdict">{ verdict(props.Result.DistanceKm) }</p>
+				<p class="result__distance">{ distanceLabel(props.Result.DistanceKm) }</p>
+				<p class="result__points">
+					<span class="result__points-value">+{ thousands(props.Result.Points) }</span>
+					<span class="result__points-label">points</span>
+				</p>
+			</header>
+			<div class="map map--answer" data-safari-map="safari-map" role="img" aria-label="Your guess and where the animal was really seen">
+				<p class="map__fallback">{ distanceLabel(props.Result.DistanceKm) }</p>
+			</div>
+			<div class="reveal">
+				<figure class="reveal__plate">
+					<img src={ photo(props.Sighting).URL } alt={ speciesName(props.Sighting) }/>
+					<figcaption>{ credit(photo(props.Sighting)) }</figcaption>
+				</figure>
+				<div class="reveal__body">
+					<h2 class="reveal__name">{ speciesName(props.Sighting) }</h2>
+					if props.Sighting.Species.ScientificName != "" {
+						<p class="reveal__scientific">{ props.Sighting.Species.ScientificName }</p>
+					}
+					<dl class="clues">
+						<div class="clue">
+							<dt>Seen at</dt>
+							<dd>{ place(props.Sighting.Location) }</dd>
+						</div>
+						<div class="clue">
+							<dt>On</dt>
+							<dd>{ props.Sighting.HappenedAt.Format("2 January 2006") }</dd>
+						</div>
+						<div class="clue">
+							<dt>Position</dt>
+							<dd class="mono">
+								{ strconv.FormatFloat(props.Sighting.Location.Latitude, 'f', 4, 64) },
+								{ strconv.FormatFloat(props.Sighting.Location.Longitude, 'f', 4, 64) }
+							</dd>
+						</div>
+					</dl>
+					if props.Sighting.ReferenceURL != "" {
+						<p>
+							<a class="link" href={ templ.URL(props.Sighting.ReferenceURL) } rel="noopener">
+								The original record on GBIF
+							</a>
+						</p>
+					}
+				</div>
+			</div>
+			<div class="result__actions">
+				if props.Game.Complete() {
+					<a class="button button--primary" href="/play">See how you did</a>
+				} else {
+					<a class="button button--primary" href="/play">Next round</a>
+				}
+			</div>
+		</section>
+		@templ.JSONScript("safari-map", answerMap(props))
+	}
+}
+
+// Over is the finished game: the total, what it makes the player, and a
+// line they can paste anywhere.
+templ Over(props OverProps) {
+	@layout.Base(layout.BaseProps{
+		Title:       "Final score",
+		Description: "Look at the animal. Guess where on earth it was seen. Five rounds, 25,000 points.",
+		Class:       "is-playing",
+	}) {
+		<section class="final">
+			<p class="final__eyebrow">{ game.Name }</p>
+			<p class="final__score">
+				<span class="final__total">{ thousands(props.Game.Total()) }</span>
+				<span class="final__max">/ { thousands(game.MaxScore) }</span>
+			</p>
+			<h1 class="final__rank">{ props.Game.Rank() }</h1>
+			<ol class="rounds">
+				for i, result := range props.Game.Results {
+					<li class="rounds__row">
+						<span class="rounds__n mono">{ strconv.Itoa(i + 1) }</span>
+						<span class="rounds__medal" aria-hidden="true">{ game.Medal(result.Points) }</span>
+						<span class="rounds__what">
+							if name := props.playedName(i); name != "" {
+								<span class="rounds__name">{ name }</span>
+								<span class="rounds__place">{ props.playedPlace(i) }</span>
+							} else {
+								<span class="rounds__name">Round { strconv.Itoa(i + 1) }</span>
+							}
+							<span class="rounds__distance">{ distanceLabel(result.DistanceKm) }</span>
+						</span>
+						<span class="rounds__meter">
+							<span class="rounds__fill" data-width={ barWidth(result.Points) }></span>
+						</span>
+						<span class="rounds__points mono">{ thousands(result.Points) }</span>
+					</li>
+				}
+			</ol>
+			<div class="share">
+				<h2 class="share__title">Brag about it</h2>
+				<pre class="share__text" id="share-text">{ props.Game.Share() }</pre>
+				<button class="button" type="button" data-copy="share-text">Copy result</button>
+			</div>
+			<div class="final__actions">
+				<a class="button button--primary" href="/play/new">Play again</a>
+				<a class="button" href="/">Browse the record</a>
+			</div>
+		</section>
+	}
+}
+
+// scoreboard is the strip above a round: where the player is, and what
+// they have banked so far.
+templ scoreboard(g game.Game) {
+	<div class="scoreboard">
+		<p class="scoreboard__round">{ roundLabel(g) }</p>
+		<ol class="pips" aria-label="Rounds played">
+			for i := range game.Rounds {
+				if i < len(g.Results) {
+					<li class="pip pip--done" aria-label="Played">{ game.Medal(g.Results[i].Points) }</li>
+				} else {
+					<li class="pip" aria-hidden="true"></li>
+				}
+			}
+		</ol>
+		<p class="scoreboard__score">
+			<span class="mono">{ thousands(g.Total()) }</span>
+			<span class="scoreboard__score-label">points</span>
+		</p>
+	</div>
+}

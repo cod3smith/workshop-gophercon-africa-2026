@@ -1,27 +1,96 @@
 package pages
 
 import (
+	"strconv"
+	"workshop/internal/domain/game"
 	"workshop/internal/domain/sighting"
-	"workshop/web/views/components"
 	"workshop/web/views/layout"
 )
 
 templ Home(sightings []sighting.Sighting) {
 	@layout.Base(layout.BaseProps{
-		Title: "Sightings",
+		Title:       "The record",
+		Description: "Occurrence records of wild animals, and a game: look at the photograph and guess where on earth it was taken.",
 	}) {
-		<h1>Sightings</h1>
-		if len(sightings) == 0 {
-			<p>No sightings have been ingested yet.</p>
-		} else {
-			<p>Total: { len(sightings) }</p>
-			<ul class="sightings">
-				for _, s := range sightings {
-					<li>
-						@components.SightingCard(s)
-					</li>
+		{{ summary := sighting.Summarise(sightings) }}
+		<section class="hero">
+			<p class="hero__eyebrow">GopherCon Africa 2026 · Nairobi</p>
+			<h1 class="hero__title">
+				Somebody saw this animal,
+				<em>somewhere</em> on earth.
+			</h1>
+			<p class="hero__lede">
+				Every record below is a real observation: an animal, a date, a position,
+				and the weather that day. Now the game — we show you the photograph and
+				keep the place to ourselves.
+			</p>
+			<div class="hero__actions">
+				<a class="button button--primary button--large" href="/play">Play { game.Name }</a>
+				<a class="button button--ghost button--large" href="#record">Browse the record</a>
+			</div>
+			if summary.Sightings > 0 {
+				<dl class="figures">
+					<div class="figure">
+						<dt>Sightings</dt>
+						<dd class="mono">{ thousands(summary.Sightings) }</dd>
+					</div>
+					<div class="figure">
+						<dt>Species</dt>
+						<dd class="mono">{ thousands(summary.Species) }</dd>
+					</div>
+					<div class="figure">
+						<dt>Countries</dt>
+						<dd class="mono">{ thousands(summary.Countries) }</dd>
+					</div>
+					<div class="figure">
+						<dt>Photographs</dt>
+						<dd class="mono">{ thousands(summary.Media) }</dd>
+					</div>
+				</dl>
+			}
+		</section>
+		<section class="record" id="record" aria-labelledby="record-heading">
+			<header class="record__head">
+				<h2 id="record-heading">The record</h2>
+				if summary.Sightings > 0 {
+					<p class="record__range">
+						The { thousands(len(tiles(sightings))) } most recent of { thousands(summary.Sightings) }
+						· { summary.Earliest.Format("Jan 2006") } — { summary.Latest.Format("Jan 2006") }
+					</p>
 				}
-			</ul>
-		}
+			</header>
+			if len(sightings) == 0 {
+				<p class="empty">
+					Nothing has been ingested yet. Run <code>go run . db seed</code> and
+					reload this page.
+				</p>
+			} else {
+				<ul class="tiles">
+					for _, s := range tiles(sightings) {
+						<li class="tile">
+							<article>
+								{{ image := photo(s) }}
+								if image.URL != "" {
+									<img class="tile__photo" src={ image.URL } alt={ speciesName(s) } loading="lazy"/>
+								} else {
+									<div class="tile__photo tile__photo--none" aria-hidden="true"></div>
+								}
+								<div class="tile__body">
+									<h3 class="tile__name">{ speciesName(s) }</h3>
+									<p class="tile__place">{ place(s.Location) }</p>
+									<p class="tile__meta mono">
+										{ s.HappenedAt.Format("Jan 2006") }
+										if s.Weather.Temperature.Actual != 0 {
+											<span class="tile__dot">·</span>
+											{ strconv.FormatFloat(s.Weather.Temperature.Actual, 'f', 0, 64) }°C
+										}
+									</p>
+								</div>
+							</article>
+						</li>
+					}
+				</ul>
+			}
+		</section>
 	}
 }

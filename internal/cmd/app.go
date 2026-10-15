@@ -9,6 +9,7 @@ import (
 	"workshop/internal/clients/openmeteo"
 	"workshop/internal/common/logs"
 	"workshop/internal/common/printer"
+	"workshop/internal/domain/game"
 	"workshop/internal/domain/sighting"
 	"workshop/internal/domain/sighting/stores/sightingsqlite"
 	"workshop/internal/domain/species"
@@ -31,6 +32,7 @@ type app struct {
 	Printer    *printer.Console
 	Migrations *goose.Provider
 	Sightings  *sighting.Service
+	Games      *game.Service
 	Species    *species.Service
 	Weather    *weather.Service
 
@@ -94,6 +96,7 @@ func bootstrap(ctx context.Context, cfg config.Config, level slog.Level, live bo
 		Migrations: migrate,
 		Printer:    printer.New(os.Stdout),
 		Sightings:  sightingSvc,
+		Games:      game.NewService(sightingSvc),
 		Species:    speciesSvc,
 		Weather:    weatherSvc,
 		live:       live,

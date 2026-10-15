@@ -18,6 +18,39 @@ server-side with [templ](https://templ.guide), and enriched with
 This repository is yours for the day. It's the finished app, we walk through it together, then
 you make the site your own in your fork and push it there.
 
+## Sightings Safari — what I built
+
+The site is a game. You're shown a photograph from a real GBIF occurrence record, with the
+species and the place held back, and you drop a pin on a world map where you think it was
+taken. The closer you are, the more it scores: five rounds, 25,000 points, and a result line
+you can paste into Slack.
+
+```sh
+go run . db seed     # 500 sightings, every one with a photograph and a position
+make web             # then open http://localhost:8080 and press Play
+```
+
+**Where the game lives.** `internal/domain/game` is the whole thing — rounds, haversine
+distance, the scoring curve, ranks and the shareable result. It imports no HTTP, no SQL and
+no templ, takes its sightings through a `SightingSource` interface the existing
+`sighting.Service` already satisfies, and is covered by its own tests. `web/handlers/play.go`
+is the thin part: read the game, score a guess, render.
+
+Some decisions worth the thirty seconds:
+
+- **The game is in a cookie, signed.** `web/handlers/session.go` stores the game as JSON with
+  an HMAC beside it, so the server keeps no per-player state and a score edited in devtools
+  fails the signature and starts a new game.
+- **Points decay smoothly** rather than in bands, so there is always something to gain by
+  guessing a little better. A pin on top of the answer is 5,000; 1,500km out is about 1,839.
+- **A resubmitted form can't score twice.** Each round carries its number, and a guess for a
+  round already played is redirected rather than applied to the next photograph.
+- **The map is an extra.** Without JavaScript or the CDN the page still renders, and every
+  sighting is still readable on the record.
+- **The quadratic log line is gone.** `sightingsqlite.Store.List` formatted a message — and
+  the entire `rows` slice — once per row. It now logs once, with the count as an attribute,
+  which is what let the home page read the whole record instead of the latest fifty.
+
 ## Before you start
 
 You need Go (the version in `go.mod`), Git, `make` and a GitHub account. For the Theming block

@@ -44,7 +44,7 @@ func SightingCard(s sighting.Sighting) templ.Component {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var2 string
-		templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.JoinStringErrs(displayName(s.Species))
+		templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.JoinStringErrs(DisplayName(s.Species))
 		if templ_7745c5c3_Err != nil {
 			return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/views/components/sighting_card.templ`, Line: 17, Col: 31}
 		}
@@ -93,7 +93,7 @@ func SightingCard(s sighting.Sighting) templ.Component {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var5 string
-		templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(place(s.Location))
+		templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(Place(s.Location))
 		if templ_7745c5c3_Err != nil {
 			return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/views/components/sighting_card.templ`, Line: 27, Col: 26}
 		}
@@ -111,7 +111,7 @@ func SightingCard(s sighting.Sighting) templ.Component {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var6 string
-			templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(individuals(*s.IndividualCount))
+			templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(Individuals(*s.IndividualCount))
 			if templ_7745c5c3_Err != nil {
 				return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/views/components/sighting_card.templ`, Line: 30, Col: 41}
 			}
@@ -159,14 +159,14 @@ func SightingCard(s sighting.Sighting) templ.Component {
 	})
 }
 
-// displayName prefers the name a reader would recognise, falling back
+// DisplayName prefers the name a reader would recognise, falling back
 // through the taxonomy as GBIF records thin out.
-func displayName(sp species.Species) string {
+func DisplayName(sp species.Species) string {
 	return cmp.Or(sp.VernacularName, sp.CanonicalName, sp.ScientificName, "Unknown species")
 }
 
-// place joins whichever parts of the location GBIF supplied.
-func place(l sighting.Location) string {
+// Place joins whichever parts of the location GBIF supplied.
+func Place(l sighting.Location) string {
 	parts := slices.DeleteFunc(
 		[]string{l.Locality, l.StateProvince, l.Country},
 		func(s string) bool { return s == "" },
@@ -174,8 +174,8 @@ func place(l sighting.Location) string {
 	return cmp.Or(strings.Join(parts, ", "), "Location unknown")
 }
 
-// individuals renders how many animals were seen in a single sighting.
-func individuals(n int) string {
+// Individuals renders how many animals were seen in a single sighting.
+func Individuals(n int) string {
 	if n == 1 {
 		return "1 individual"
 	}
