@@ -4,13 +4,20 @@
 (() => {
 	"use strict";
 
-	// The widths come from the server as a percentage, and are applied here
-	// so the bars animate in from zero rather than appearing full.
-	requestAnimationFrame(() => {
-		document.querySelectorAll("[data-width]").forEach((bar) => {
-			bar.style.width = bar.dataset.width;
+	// The scores come from the server as a fraction, and are applied here so
+	// the bars grow from nothing rather than appearing full. Without
+	// JavaScript the bars stay empty and the numbers beside them still say
+	// everything the bars would have.
+	const fillBars = () => {
+		document.querySelectorAll("[data-scale]").forEach((bar) => {
+			bar.style.transform = `scaleX(${bar.dataset.scale})`;
 		});
-	});
+	};
+
+	// On a task of its own rather than inside requestAnimationFrame, which
+	// never fires while the tab is hidden: a page restored in a background
+	// tab would otherwise sit there with every bar empty.
+	setTimeout(fillBars, 0);
 
 	document.querySelectorAll("[data-copy]").forEach((button) => {
 		button.addEventListener("click", async () => {

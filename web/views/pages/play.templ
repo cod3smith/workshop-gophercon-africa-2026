@@ -94,7 +94,7 @@ templ Answer(props AnswerProps) {
 	}) {
 		@scoreboard(props.Game, len(props.Game.Results))
 		<section class="result">
-			<header class="result__head">
+			<header class={ "result__head", tone(props.Result.Points) }>
 				<p class="result__verdict">{ verdict(props.Result.DistanceKm) }</p>
 				<p class="result__distance">{ distanceLabel(props.Result.DistanceKm) }</p>
 				<p class="result__points">
@@ -161,7 +161,7 @@ templ Over(props OverProps) {
 		Description: "Look at the animal. Guess where on earth it was seen. Five rounds, 25,000 points.",
 		Class:       "is-playing",
 	}) {
-		<section class="final">
+		<section class={ "final", gameTone(props.Game) }>
 			<p class="final__eyebrow">{ game.Name }</p>
 			<p class="final__score">
 				<span class="final__total">{ thousands(props.Game.Total()) }</span>
@@ -170,7 +170,7 @@ templ Over(props OverProps) {
 			<h1 class="final__rank">{ props.Game.Rank() }</h1>
 			<ol class="rounds">
 				for i, result := range props.Game.Results {
-					<li class="rounds__row">
+					<li class={ "rounds__row", tone(result.Points) }>
 						<span class="rounds__n mono">{ strconv.Itoa(i + 1) }</span>
 						<span class="rounds__medal" aria-hidden="true">{ game.Medal(result.Points) }</span>
 						<span class="rounds__what">
@@ -183,7 +183,7 @@ templ Over(props OverProps) {
 							<span class="rounds__distance">{ distanceLabel(result.DistanceKm) }</span>
 						</span>
 						<span class="rounds__meter">
-							<span class="rounds__fill" data-width={ barWidth(result.Points) }></span>
+							<span class="rounds__fill" data-scale={ barScale(result.Points) }></span>
 						</span>
 						<span class="rounds__points mono">{ thousands(result.Points) }</span>
 					</li>

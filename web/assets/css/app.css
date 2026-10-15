@@ -4,18 +4,37 @@
    --------------------------------------------------------------------------- */
 
 :root {
-	--ink: #0b100e;
-	--ink-2: #121916;
-	--ink-3: #1a231e;
-	--ink-4: #222d27;
-	--line: #27322c;
+	/* Surfaces. Each step is a step you can actually see: the ramp used to
+	   separate planes by 1.07, which is below what an eye resolves, so the
+	   borders were carrying structure they were far too faint to carry. */
+	--ink: #0d110f;        /* the canvas */
+	--surface: #272d2a;    /* cards, panels, controls at rest */
+	--raised: #333b37;     /* rows sitting on a card */
+	--sunken: #1b1f1d;     /* wells and tracks cut into one */
+
+	/* Two weights of edge, because they do different jobs. --line is
+	   structure and may be quiet; --edge bounds a control and has to clear
+	   3:1 against the surface beside it to satisfy WCAG 1.4.11. */
+	--line: #3d4742;
+	--edge: #687971;
+
+	/* Text. */
 	--paper: #ecf1ed;
 	--paper-dim: #9bada2;
+
+	/* Action. Gold means one thing only - you can act on this, or this is
+	   where the keyboard is. Nothing decorative is allowed to wear it, or
+	   it stops being a signal. */
 	--gold: #d9a227;
 	--gold-soft: #f0c55e;
-	--clay: #c2693b;
-	--moss: #5fb37a;
-	--blood: #d1495b;
+
+	/* Measurement. How good a guess was, on everything that reports one:
+	   the verdict, the points, the bars, the rank. Always beside a number
+	   or a medal, never the only thing saying it.
+	   --clay is legible on --ink and --surface; it is too dark for body
+	   text on --raised, so it stays off that one. */
+	--moss: #63bb7f;       /* near, good */
+	--clay: #e07944;       /* far, poor */
 
 	--display: "EB Garamond", Georgia, "Times New Roman", serif;
 	--sans: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
@@ -23,7 +42,6 @@
 
 	--gutter: clamp(1rem, 4vw, 3rem);
 	--radius: 2px;
-	--shadow: 0 1rem 3rem rgb(0 0 0 / 55%);
 }
 
 *,
@@ -141,7 +159,7 @@ a:hover {
 }
 
 .logo__disc {
-	fill: var(--ink-3);
+	fill: var(--raised);
 	stroke: var(--gold);
 	stroke-width: 1.5;
 }
@@ -180,7 +198,7 @@ a:hover {
 
 .nav a:hover {
 	color: var(--paper);
-	background: var(--ink-2);
+	background: var(--surface);
 }
 
 .nav__cta {
@@ -201,9 +219,9 @@ a:hover {
 	align-items: center;
 	justify-content: center;
 	padding: 0.7rem 1.4rem;
-	border: 1px solid var(--line);
+	border: 1px solid var(--edge);
 	border-radius: var(--radius);
-	background: var(--ink-2);
+	background: var(--surface);
 	color: var(--paper);
 	font: inherit;
 	font-size: 0.95rem;
@@ -216,7 +234,7 @@ a:hover {
 
 .button:hover {
 	border-color: var(--gold);
-	background: var(--ink-3);
+	background: var(--raised);
 	color: var(--paper);
 }
 
@@ -261,7 +279,7 @@ a:hover {
 
 .hero__eyebrow {
 	margin: 0 0 1.5rem;
-	color: var(--gold);
+	color: var(--paper-dim);
 	font-family: var(--mono);
 	font-size: 0.78rem;
 	letter-spacing: 0.22em;
@@ -279,7 +297,7 @@ a:hover {
 }
 
 .hero__title em {
-	color: var(--gold);
+	color: var(--paper);
 	font-style: italic;
 }
 
@@ -323,7 +341,7 @@ a:hover {
 	margin: 0.3rem 0 0;
 	font-size: 1.8rem;
 	font-weight: 500;
-	color: var(--gold);
+	color: var(--moss);
 }
 
 /* --- The record --------------------------------------------------------- */
@@ -373,12 +391,12 @@ a:hover {
 	overflow: hidden;
 	border: 1px solid var(--line);
 	border-radius: var(--radius);
-	background: var(--ink-2);
+	background: var(--surface);
 	transition: border-color 220ms ease, transform 220ms ease;
 }
 
 .tile article:hover {
-	border-color: var(--gold);
+	border-color: var(--edge);
 	transform: translateY(-3px);
 }
 
@@ -398,7 +416,7 @@ a:hover {
 
 .tile__photo--none {
 	background:
-		repeating-linear-gradient(135deg, var(--ink-3) 0 10px, var(--ink-2) 10px 20px);
+		repeating-linear-gradient(135deg, var(--raised) 0 10px, var(--surface) 10px 20px);
 }
 
 .tile__body {
@@ -421,7 +439,7 @@ a:hover {
 
 .tile__meta {
 	margin: 0.6rem 0 0;
-	color: var(--gold);
+	color: var(--paper-dim);
 	font-size: 0.76rem;
 	letter-spacing: 0.06em;
 	text-transform: uppercase;
@@ -441,7 +459,7 @@ a:hover {
 
 .empty code {
 	font-family: var(--mono);
-	color: var(--gold);
+	color: var(--moss);
 }
 
 /* --- Scoreboard --------------------------------------------------------- */
@@ -459,7 +477,7 @@ a:hover {
 
 .scoreboard__round {
 	margin: 0;
-	color: var(--gold);
+	color: var(--paper-dim);
 	font-family: var(--mono);
 	font-size: 0.8rem;
 	letter-spacing: 0.18em;
@@ -479,16 +497,16 @@ a:hover {
 	place-items: center;
 	width: 1.6rem;
 	height: 1.6rem;
-	border: 1px solid var(--line);
+	border: 1px solid var(--edge);
 	border-radius: var(--radius);
-	background: var(--ink-2);
+	background: var(--surface);
 	font-size: 0.8rem;
 	line-height: 1;
 }
 
 .pip--done {
-	border-color: var(--ink-4);
-	background: var(--ink-3);
+	border-color: var(--sunken);
+	background: var(--raised);
 }
 
 .scoreboard__score {
@@ -521,7 +539,7 @@ a:hover {
 	overflow: hidden;
 	border: 1px solid var(--line);
 	border-radius: var(--radius);
-	background: var(--ink-2);
+	background: var(--surface);
 }
 
 .plate__photo {
@@ -551,7 +569,7 @@ a:hover {
 	padding: 1.4rem;
 	border: 1px solid var(--line);
 	border-radius: var(--radius);
-	background: var(--ink-2);
+	background: var(--surface);
 }
 
 .panel__title {
@@ -584,7 +602,7 @@ a:hover {
 	gap: 0.3rem 1rem;
 	justify-content: space-between;
 	padding: 0.7rem 0.9rem;
-	background: var(--ink-3);
+	background: var(--raised);
 }
 
 .clue dt {
@@ -636,7 +654,7 @@ a:hover {
 .field__readout {
 	display: block;
 	padding: 0.6rem 0.8rem;
-	border: 1px solid var(--line);
+	border: 1px solid var(--edge);
 	border-radius: var(--radius);
 	background: var(--ink);
 	color: var(--paper-dim);
@@ -646,8 +664,8 @@ a:hover {
 }
 
 .field__readout[data-set="true"] {
-	border-color: var(--gold);
-	color: var(--gold);
+	border-color: var(--moss);
+	color: var(--moss);
 }
 
 /* --- The map ------------------------------------------------------------ */
@@ -657,9 +675,9 @@ a:hover {
 	min-height: 20rem;
 	aspect-ratio: 16 / 10;
 	overflow: hidden;
-	border: 1px solid var(--line);
+	border: 1px solid var(--edge);
 	border-radius: var(--radius);
-	background: var(--ink-3);
+	background: var(--raised);
 	cursor: crosshair;
 }
 
@@ -735,7 +753,7 @@ a:hover {
 }
 
 .map .leaflet-container {
-	background: var(--ink-3);
+	background: var(--raised);
 	font-family: var(--sans);
 }
 
@@ -750,14 +768,29 @@ a:hover {
 }
 
 .map .leaflet-bar a {
-	background: var(--ink-2);
+	background: var(--surface);
 	border-color: var(--line);
 	color: var(--paper);
 }
 
 .map .leaflet-bar a:hover {
-	background: var(--ink-3);
+	background: var(--raised);
 	color: var(--gold);
+}
+
+/* A result's colour says how well it went, on top of the number and the
+   medal that already say it, never instead of them. Set once on the
+   container; everything that reports the result reads it. */
+.is-near {
+	--tone: var(--moss);
+}
+
+.is-mid {
+	--tone: var(--paper);
+}
+
+.is-far {
+	--tone: var(--clay);
 }
 
 /* --- A scored round ----------------------------------------------------- */
@@ -776,9 +809,8 @@ a:hover {
 	justify-content: space-between;
 	padding: 1.3rem 1.5rem;
 	border: 1px solid var(--line);
-	border-left: 3px solid var(--gold);
 	border-radius: var(--radius);
-	background: var(--ink-2);
+	background: var(--surface);
 }
 
 .result__verdict {
@@ -787,7 +819,7 @@ a:hover {
 	font-size: clamp(1.6rem, 4vw, 2.4rem);
 	font-weight: 500;
 	font-style: italic;
-	color: var(--gold);
+	color: var(--tone, var(--paper));
 }
 
 .result__distance {
@@ -808,7 +840,7 @@ a:hover {
 	font-family: var(--mono);
 	font-size: 2rem;
 	font-weight: 700;
-	color: var(--moss);
+	color: var(--tone, var(--moss));
 }
 
 .result__points-label {
@@ -826,7 +858,7 @@ a:hover {
 	padding: 1.5rem;
 	border: 1px solid var(--line);
 	border-radius: var(--radius);
-	background: var(--ink-2);
+	background: var(--surface);
 }
 
 .reveal__plate {
@@ -888,7 +920,7 @@ a:hover {
 
 .final__eyebrow {
 	margin: 0;
-	color: var(--gold);
+	color: var(--paper-dim);
 	font-family: var(--mono);
 	font-size: 0.78rem;
 	letter-spacing: 0.22em;
@@ -922,7 +954,7 @@ a:hover {
 	font-size: clamp(1.8rem, 5vw, 2.8rem);
 	font-weight: 500;
 	font-style: italic;
-	color: var(--gold);
+	color: var(--tone, var(--paper));
 }
 
 .rounds {
@@ -942,7 +974,7 @@ a:hover {
 	gap: 0.8rem;
 	align-items: center;
 	padding: 0.7rem 0.9rem;
-	background: var(--ink-2);
+	background: var(--surface);
 }
 
 .rounds__n {
@@ -974,7 +1006,7 @@ a:hover {
 }
 
 .rounds__distance {
-	color: var(--gold);
+	color: var(--paper-dim);
 	font-family: var(--mono);
 	font-size: 0.72rem;
 	letter-spacing: 0.06em;
@@ -985,16 +1017,20 @@ a:hover {
 	display: block;
 	height: 0.4rem;
 	border-radius: 999px;
-	background: var(--ink-4);
+	background: var(--sunken);
 	overflow: hidden;
 }
 
 .rounds__fill {
 	display: block;
-	width: 0;
+	/* Scaled rather than widened: animating width lays the row out again on
+	   every frame, and a transform does not. */
+	width: 100%;
 	height: 100%;
-	background: linear-gradient(90deg, var(--clay), var(--gold));
-	transition: width 700ms cubic-bezier(0.2, 0.8, 0.2, 1);
+	transform: scaleX(0);
+	transform-origin: left center;
+	background: var(--tone, var(--paper-dim));
+	transition: transform 700ms cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 .rounds__points {
@@ -1006,7 +1042,7 @@ a:hover {
 	padding: 1.5rem;
 	border: 1px solid var(--line);
 	border-radius: var(--radius);
-	background: var(--ink-2);
+	background: var(--surface);
 	margin-bottom: 2.5rem;
 }
 
@@ -1046,7 +1082,7 @@ a:hover {
 
 .oops__code {
 	margin: 0;
-	color: var(--gold);
+	color: var(--clay);
 	font-size: clamp(4rem, 14vw, 7rem);
 	font-weight: 700;
 	line-height: 1;

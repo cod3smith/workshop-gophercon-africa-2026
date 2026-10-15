@@ -177,6 +177,26 @@ func distanceLabel(km float64) string {
 	}
 }
 
+// tone names how a round went, so the colour the page uses agrees with
+// the distance and the medal already stating it rather than being the only
+// thing that says so.
+func tone(points int) string {
+	switch {
+	case points >= 4000:
+		return "is-near"
+	case points >= 1500:
+		return "is-mid"
+	default:
+		return "is-far"
+	}
+}
+
+// gameTone is the same judgement over a whole game, by what an average
+// round of it was worth.
+func gameTone(g game.Game) string {
+	return tone(g.Total() * game.MaxRoundScore / game.MaxScore)
+}
+
 // verdict is a word for how good a guess was, so the number means
 // something at a glance.
 func verdict(km float64) string {
@@ -213,9 +233,10 @@ func thousands(n int) string {
 	return string(out)
 }
 
-// barWidth is a result's points as a percentage, for the bar under it.
-func barWidth(points int) string {
-	return fmt.Sprintf("%d%%", points*100/game.MaxRoundScore)
+// barScale is a result's points as a fraction of a round's maximum, which
+// the bar under it is scaled by.
+func barScale(points int) string {
+	return fmt.Sprintf("%.3f", float64(points)/float64(game.MaxRoundScore))
 }
 
 // homeTiles is how many sightings the home page shows. The figures above
