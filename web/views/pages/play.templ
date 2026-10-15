@@ -43,7 +43,7 @@ templ Question(props QuestionProps) {
 						alt="An unidentified animal, photographed in the wild"
 					/>
 				</a>
-				<figcaption class="plate__credit">{ credit(photo(props.Sighting)) }</figcaption>
+				<figcaption class="plate__credit">{ Credit(photo(props.Sighting), props.Sighting.Species.ScientificName) }</figcaption>
 			</figure>
 			<section class="guess" aria-label="Your guess">
 				<div class="mapframe">
@@ -129,7 +129,11 @@ templ Question(props QuestionProps) {
 					for _, clue := range clues(props.Sighting) {
 						<div class="clue">
 							<dt>{ clue.Label }</dt>
-							<dd>{ clue.Value }</dd>
+							<dd
+								if clue.Title != "" {
+									title={ clue.Title }
+								}
+							>{ clue.Value }</dd>
 						</div>
 					}
 				</dl>
@@ -179,7 +183,7 @@ templ Answer(props AnswerProps) {
 			<div class="reveal">
 				<figure class="reveal__plate">
 					<img src={ PhotoURL(photo(props.Sighting), "large") } width="1024" height="1024" alt={ speciesName(props.Sighting) }/>
-					<figcaption>{ credit(photo(props.Sighting)) }</figcaption>
+					<figcaption>{ Credit(photo(props.Sighting), props.Sighting.Species.ScientificName) }</figcaption>
 				</figure>
 				<div class="reveal__body">
 					<h2 class="reveal__name">{ speciesName(props.Sighting) }</h2>

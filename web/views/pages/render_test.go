@@ -5,9 +5,11 @@ import (
 	"context"
 	"regexp"
 	"testing"
+	"time"
 	"uuid"
 	"workshop/internal/domain/game"
 	"workshop/internal/domain/sighting"
+	"workshop/internal/domain/weather"
 	"workshop/web/views/pages"
 
 	"github.com/stretchr/testify/assert"
@@ -213,4 +215,109 @@ func TestQuestion_LetsThePhotographBeOpenedFullSize(t *testing.T) {
 	// so it adds one tab stop before the map rather than hiding the controls.
 	assert.Less(t, regexp.MustCompile(`class="plate__link"`).FindStringIndex(html)[0], regexp.MustCompile(`name="lat"`).FindStringIndex(html)[0])
 	assert.Regexp(t, `class="plate__link"[^>]*>\s*<img[^>]*class="plate__photo"`, html)
+}
+
+func TestTaxon_NamesTheGroupInPlainEnglish(t *testing.T) {
+	t.Parallel()
+
+	tt := map[string]struct {
+		class, phylum, want string
+	}{
+		"mammals":            {class: "Mammalia", want: "Mammals"},
+		"birds":              {class: "Aves", want: "Birds"},
+		"turtles":            {class: "Testudines", want: "Turtles"},
+		"lizards and snakes": {class: "Squamata", want: "Lizards and snakes"},
+		"crocodiles":         {class: "Crocodylia", want: "Crocodiles"},
+		"sharks and rays":    {class: "Elasmobranchii", want: "Sharks and rays"},
+		// A class this table has not heard of is still a hint, so it is
+		// shown as recorded rather than hidden.
+		"an unlisted class": {class: "Amphibia", want: "Amphibia"},
+		"no class":          {phylum: "Chordata", want: "Chordata"},
+		"nothing at all":    {want: "Unrecorded"},
+	}
+
+	for name, test := range tt {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			s := sighting.Sighting{}
+			s.Species.Class = test.class
+			s.Species.Phylum = test.phylum
+			assert.Equal(t, test.want, pages.Taxon(s))
+		})
+	}
+}
+
+func TestQuestion_ExplainsTheGroupAndTheWeatherInPlainEnglish(t *testing.T) {
+	t.Parallel()
+
+	s := sighting.Sighting{
+		ID:         uuid.New(),
+		HappenedAt: time.Date(2024, time.March, 5, 0, 0, 0, 0, time.UTC),
+		Media:      []sighting.Media{{Type: "StillImage", URL: "https://example.org/animal.jpg"}},
+	}
+	s.Species.Class = "Mammalia"
+	s.Weather.Temperature.Actual = 28
+	// Code 2 is "Partly cloudy" in Open-Meteo's table. The stored
+	// description is what the wrong WMO table called it.
+	s.Weather.Condition = weather.Condition{Code: 2, Description: "State of sky on the whole unchanged"}
+
+	var buf bytes.Buffer
+	err := pages.Question(pages.QuestionProps{Game: game.New([]uuid.UUID{s.ID}), Sighting: s}).Render(context.Background(), &buf)
+	require.NoError(t, err)
+	html := buf.String()
+
+	assert.Contains(t, html, "Mammals")
+	assert.NotContains(t, html, ">Mammalia<", "the Latin should not be the visible text")
+	assert.Contains(t, html, `title="Mammalia"`, "the Latin should stay available on hover")
+	assert.Contains(t, html, "28°C, partly cloudy")
+	assert.NotContains(t, html, "State of sky on the whole unchanged", "the stored description is from the wrong table")
+}
+
+func TestCredit(t *testing.T) {
+	t.Parallel()
+
+	tt := map[string]struct {
+		media          sighting.Media
+		scientificName string
+		want           string
+	}{
+		"a photographer is named": {
+			media: sighting.Media{Creator: "Jos Simons"}, scientificName: "Ara macao",
+			want: "Jos Simons",
+		},
+		"the rights holder stands in for a missing creator": {
+			media: sighting.Media{RightsHolder: "Jos Simons"}, scientificName: "Ara macao",
+			want: "Jos Simons",
+		},
+		"nobody is recorded": {
+			media: sighting.Media{}, scientificName: "Ara macao",
+			want: "Photographer unrecorded",
+		},
+		// A credit that is the species gives the answer away on a round
+		// that has not been guessed yet, and is no credit at all.
+		"a credit that is the genus in capitals": {
+			media: sighting.Media{RightsHolder: "MALACOCHERSUS"}, scientificName: "Malacochersus tornieri",
+			want: "Photographer unrecorded",
+		},
+		"a credit that is the genus": {
+			media: sighting.Media{Creator: "Malacochersus"}, scientificName: "Malacochersus tornieri",
+			want: "Photographer unrecorded",
+		},
+		"a credit that is the full name": {
+			media: sighting.Media{Creator: "  malacochersus TORNIERI "}, scientificName: "Malacochersus tornieri",
+			want: "Photographer unrecorded",
+		},
+		"an unknown species leaves the credit alone": {
+			media: sighting.Media{Creator: "Jos Simons"}, scientificName: "",
+			want: "Jos Simons",
+		},
+	}
+
+	for name, test := range tt {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			assert.Equal(t, test.want, pages.Credit(test.media, test.scientificName))
+		})
+	}
 }

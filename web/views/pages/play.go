@@ -10,6 +10,7 @@ import (
 	"uuid"
 	"workshop/internal/domain/game"
 	"workshop/internal/domain/sighting"
+	"workshop/internal/domain/weather"
 	"workshop/web/views/components"
 )
 
@@ -55,6 +56,8 @@ type (
 	Clue struct {
 		Label string
 		Value string
+		// Title is the Latin behind a plain-English value, shown on hover.
+		Title string
 	}
 )
 
@@ -98,23 +101,47 @@ func PhotoURL(m sighting.Media, size string) string {
 	return dir + size + "." + extension
 }
 
-// credit names whoever took the photograph, which their licence asks for.
-func credit(m sighting.Media) string {
-	if m.Creator == "" && m.RightsHolder == "" {
+// Credit names whoever took the photograph, which their licence asks for.
+//
+// Some records carry the species' own genus where a photographer should be
+// (a tortoise's, over a photograph of an impala). That is no attribution,
+// and on a round that has not been guessed it names an animal, so a credit
+// that is the scientific name or its genus, in any case, counts as none.
+func Credit(m sighting.Media, scientificName string) string {
+	name := m.Creator
+	if name == "" {
+		name = m.RightsHolder
+	}
+
+	if name == "" || namesTheSpecies(name, scientificName) {
 		return "Photographer unrecorded"
 	}
-	if m.Creator == "" {
-		return m.RightsHolder
+	return name
+}
+
+// namesTheSpecies reports whether credit is the scientific name or just its
+// genus, ignoring case and surrounding space.
+func namesTheSpecies(credit, scientificName string) bool {
+	credit = strings.TrimSpace(credit)
+	if credit == "" || scientificName == "" {
+		return false
 	}
-	return m.Creator
+
+	genus, _, _ := strings.Cut(strings.TrimSpace(scientificName), " ")
+	return strings.EqualFold(credit, genus) || strings.EqualFold(credit, strings.TrimSpace(scientificName))
 }
 
 // clues are the hints shown with the photograph. The species and the place
 // are deliberately missing: working those out is the game.
 func clues(s sighting.Sighting) []Clue {
+	group := Clue{Label: "Group", Value: Taxon(s)}
+	if latin := taxonLatin(s); latin != "" {
+		group.Title = latin
+	}
+
 	out := []Clue{
 		{Label: "Recorded", Value: s.HappenedAt.Format("January 2006")},
-		{Label: "Group", Value: taxon(s)},
+		group,
 	}
 
 	if s.Weather.Temperature.Actual != 0 {
@@ -128,10 +155,26 @@ func clues(s sighting.Sighting) []Clue {
 	return out
 }
 
-// taxon is the broadest name for what kind of animal it is, which hints
-// without naming the species.
-func taxon(s sighting.Sighting) string {
+// groups are the taxonomic classes in the record, in the words a player
+// would use. A class says what kind of animal it is, but only to someone
+// who already knows what a class is.
+var groups = map[string]string{
+	"Mammalia":       "Mammals",
+	"Aves":           "Birds",
+	"Testudines":     "Turtles",
+	"Squamata":       "Lizards and snakes",
+	"Crocodylia":     "Crocodiles",
+	"Elasmobranchii": "Sharks and rays",
+}
+
+// Taxon is the broadest name for what kind of animal it is, which hints
+// without naming the species. It is plain English where the class is one
+// the record is known to hold, and the Latin as recorded otherwise.
+func Taxon(s sighting.Sighting) string {
 	if s.Species.Class != "" {
+		if name, ok := groups[s.Species.Class]; ok {
+			return name
+		}
 		return s.Species.Class
 	}
 	if s.Species.Phylum != "" {
@@ -140,12 +183,26 @@ func taxon(s sighting.Sighting) string {
 	return "Unrecorded"
 }
 
-// condition is the weather in words, lowercased to sit in a sentence.
-func condition(s sighting.Sighting) string {
-	if s.Weather.Condition.Description == "" {
-		return "conditions unrecorded"
+// taxonLatin is the recorded class behind a plain-English group name, so a
+// player who wants the Latin can hover for it. It is empty when Taxon
+// already showed the Latin.
+func taxonLatin(s sighting.Sighting) string {
+	if _, ok := groups[s.Species.Class]; ok {
+		return s.Species.Class
 	}
-	return s.Weather.Condition.Description
+	return ""
+}
+
+// condition is the weather in words, lowercased to sit in a sentence.
+//
+// It describes the stored code, not the stored description: the description
+// came from the wrong WMO table (see weather.Describe).
+func condition(s sighting.Sighting) string {
+	phrase := weather.Describe(s.Weather.Condition.Code)
+
+	runes := []rune(phrase)
+	runes[0] = unicode.ToLower(runes[0])
+	return string(runes)
 }
 
 // played returns the sighting round i asked about, and false when it is no
