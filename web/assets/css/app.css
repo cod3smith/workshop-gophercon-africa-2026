@@ -655,6 +655,7 @@ a:hover {
 	height: 100%;
 	min-height: 22rem;
 	max-height: 70vh;
+	max-height: 70svh;
 	/* Contain, not cover: the horizon, the sky and the vegetation at the
 	   frame's edge are what the player reads a place from, so cropping them
 	   would score the player on evidence the page had hidden. The well shows
@@ -1631,6 +1632,7 @@ a:hover {
 		aspect-ratio: 16 / 9;
 		min-height: 0;
 		max-height: 34vh;
+		max-height: 34svh;
 	}
 
 	/* Clues become chips: one wrapping row instead of a stack of rows. */
@@ -1715,7 +1717,7 @@ a:hover {
 	.guess .map,
 	.coords summary,
 	.coords input {
-		scroll-margin-bottom: 10rem;
+		scroll-margin-bottom: 7rem;
 	}
 
 	/* The bar rides over the page, so it has to stay short enough to leave
@@ -1800,6 +1802,7 @@ a:hover {
 @media (max-width: 60rem) and (max-height: 44rem) and (orientation: portrait) {
 	.plate__photo {
 		max-height: 22vh;
+		max-height: 22svh;
 	}
 
 	.guess .map {
@@ -1862,6 +1865,7 @@ a:hover {
 
 	.plate__photo {
 		max-height: 55vh;
+		max-height: 55svh;
 	}
 }
 
