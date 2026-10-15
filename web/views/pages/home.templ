@@ -11,6 +11,7 @@ import (
 // a time. The figures in the hero describe the whole record, not the page.
 templ Home(props HomeProps) {
 	@layout.Base(layout.BaseProps{
+		Here:        "/",
 		Title:       props.title(),
 		Description: "Occurrence records of wild animals, and a game: look at the photograph and guess where on earth it was taken.",
 		// The empty record has a gopher of its own, so the footer waits.
