@@ -38,3 +38,7 @@ bin/*
 !/vendor/**
 !/tools/gopls/vendor/**
 .superpowers/
+
+# Impeccable scratch: the critique snapshots are committed, these are not.
+.impeccable/live/
+.impeccable/hook.cache.json
