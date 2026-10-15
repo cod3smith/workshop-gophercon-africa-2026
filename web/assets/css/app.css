@@ -536,11 +536,15 @@ a:hover {
 .round {
 	display: grid;
 	grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+	grid-template-areas:
+		"plate panel"
+		"guess guess";
 	gap: 1.5rem;
 	padding-bottom: 4rem;
 }
 
 .plate {
+	grid-area: plate;
 	position: relative;
 	margin: 0;
 	overflow: hidden;
@@ -569,6 +573,7 @@ a:hover {
 }
 
 .panel {
+	grid-area: panel;
 	display: flex;
 	flex-direction: column;
 	gap: 1.1rem;
@@ -627,7 +632,7 @@ a:hover {
 
 .guess {
 	/* The map is the controller, so it spans the whole round. */
-	grid-column: 1 / -1;
+	grid-area: guess;
 	display: flex;
 	flex-direction: column;
 	gap: 0.9rem;
@@ -683,11 +688,19 @@ a:hover {
 }
 
 .guess__bar {
+	/* Pinned to the bottom of the screen while the map is in view, so
+	   "Lock it in" never has to be hunted for. */
+	position: sticky;
+	bottom: 0;
+	z-index: 500;
 	display: flex;
 	flex-wrap: wrap;
 	gap: 0.8rem;
 	align-items: center;
 	justify-content: space-between;
+	padding: 0.7rem 0;
+	border-top: 1px solid var(--line);
+	background: var(--ink);
 }
 
 .guess__bar .field__readout {
@@ -1183,17 +1196,102 @@ a:hover {
 		grid-template-columns: minmax(0, 1fr);
 	}
 
+	/* The photograph, then the map you answer on, then the clues: the
+	   evidence and the control have to share a phone screen. */
+	.round {
+		grid-template-areas:
+			"plate"
+			"guess"
+			"panel";
+		gap: 1rem;
+	}
+
 	.plate__photo {
-		min-height: 16rem;
+		aspect-ratio: 16 / 9;
+		min-height: 0;
+		max-height: 34vh;
+	}
+
+	/* Clues become chips: one wrapping row instead of a stack of rows. */
+	.panel {
+		gap: 0.8rem;
+		padding: 1rem;
+	}
+
+	.clues {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.4rem;
+		border: 0;
+		background: none;
+	}
+
+	.clue {
+		gap: 0 0.5rem;
+		padding: 0.35rem 0.7rem;
+		border: 1px solid var(--line);
+		border-radius: var(--radius);
+	}
+
+	.clue dd {
+		text-align: left;
+	}
+
+	/* The rest of the instructions is for the keyboard and the typed
+	   fields, which the labels and the map's own description still cover. */
+	.panel__hint-more {
+		display: none;
+	}
+
+	/* The masthead and scoreboard alone took a third of a phone screen,
+	   which pushed the photograph past the point where the map could share
+	   the view with it. */
+	.masthead {
+		gap: 0.4rem 1rem;
+		padding-block: 0.6rem;
+	}
+
+	.is-playing .scoreboard {
+		gap: 0.4rem 0.8rem;
+		margin: 0.75rem 0;
+		padding-bottom: 0.6rem;
+	}
+
+	.is-playing .pip {
+		width: 1.35rem;
+		height: 1.35rem;
+	}
+
+	.guess {
+		gap: 0.7rem;
 	}
 
 	.guess .map {
 		aspect-ratio: 4 / 3;
-		min-height: 20rem;
+		min-height: 15rem;
+	}
+
+	/* The bar rides over the page, so it has to stay short enough to leave
+	   the map visible above it: readouts compact, buttons side by side. */
+	.guess__bar {
+		gap: 0.4rem 0.6rem;
+		padding: 0.5rem 0;
+	}
+
+	.guess__bar .field__readout {
+		flex: 1 1 100%;
+		/* A paragraph by default, and the margin was most of the bar's height. */
+		margin: 0;
+		padding: 0.3rem 0.6rem;
+		font-size: 0.78rem;
 	}
 
 	.guess__bar .button {
-		flex: 1 1 100%;
+		/* One line each, so the two buttons share a row. */
+		flex: 1 1 auto;
+		padding: 0.65rem 0.8rem;
+		font-size: 0.95rem;
+		white-space: nowrap;
 	}
 
 	.map--answer {

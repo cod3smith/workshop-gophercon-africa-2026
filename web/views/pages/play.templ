@@ -16,6 +16,12 @@ templ Question(props QuestionProps) {
 		Class:       "is-playing",
 	}) {
 		@scoreboard(props.Game, props.Game.Round+1)
+		<!--
+			Source order is the order a phone shows: the photograph, then the map
+			you answer on, then the clues, so the evidence and the control sit
+			together. Desktop puts the clues beside the photograph with grid
+			areas; the clues hold nothing focusable, so tab order is unaffected.
+		-->
 		<form class="round" method="post" action="/play/guess">
 			<input type="hidden" name="round" value={ strconv.Itoa(props.Game.Round) }/>
 			<figure class="plate">
@@ -26,23 +32,6 @@ templ Question(props QuestionProps) {
 				/>
 				<figcaption class="plate__credit">{ credit(photo(props.Sighting)) }</figcaption>
 			</figure>
-			<section class="panel" aria-labelledby="clues-heading">
-				<h2 id="clues-heading" class="panel__title">What we know</h2>
-				<dl class="clues">
-					for _, clue := range clues(props.Sighting) {
-						<div class="clue">
-							<dt>{ clue.Label }</dt>
-							<dd>{ clue.Value }</dd>
-						</div>
-					}
-				</dl>
-				<p class="panel__hint" id="map-help">
-					Click the map to drop a pin where you think it was recorded. Or
-					focus the map, pan with the arrow keys, and press Enter to place
-					one at the crosshair. Or type a latitude and longitude under the
-					map. The closer you are, the more it scores.
-				</p>
-			</section>
 			<section class="guess" aria-label="Your guess">
 				<div class="mapframe">
 					<div
@@ -120,6 +109,30 @@ templ Question(props QuestionProps) {
 						Lock it in
 					</button>
 				</div>
+			</section>
+			<section class="panel" aria-labelledby="clues-heading">
+				<h2 id="clues-heading" class="panel__title">What we know</h2>
+				<dl class="clues">
+					for _, clue := range clues(props.Sighting) {
+						<div class="clue">
+							<dt>{ clue.Label }</dt>
+							<dd>{ clue.Value }</dd>
+						</div>
+					}
+				</dl>
+				<!--
+					The first sentence is the whole instruction for a pointer. The rest
+					is for the keyboard and the typed fields, and a phone has little
+					room for it, so a narrow screen drops it (see .panel__hint-more).
+				-->
+				<p class="panel__hint" id="map-help">
+					Click or tap the map to drop a pin where you think it was recorded.
+					<span class="panel__hint-more">
+						Or focus the map, pan with the arrow keys, and press Enter to place
+						one at the crosshair. Or type a latitude and longitude under the
+						map. The closer you are, the more it scores.
+					</span>
+				</p>
 			</section>
 		</form>
 		@templ.JSONScript("safari-map", guessMap())
