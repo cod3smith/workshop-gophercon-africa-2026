@@ -28,11 +28,20 @@ func serve(t *testing.T, accept string, handler http.HandlerFunc) *httptest.Resp
 	return w
 }
 
+// sent is the header as a client would have received it: the copy net/http
+// takes when the status line goes out. The recorder's own Header() is the
+// live map the middleware is still holding, so a field written or deleted
+// after the header has gone — too late to reach anybody — still shows up
+// there, and a test reading it would call a truncating bug correct.
+func sent(w *httptest.ResponseRecorder) http.Header {
+	return w.Result().Header
+}
+
 // body returns the response body, ungzipping it when it says it is gzipped.
 func body(t *testing.T, w *httptest.ResponseRecorder) string {
 	t.Helper()
 
-	if w.Header().Get("Content-Encoding") != "gzip" {
+	if sent(w).Get("Content-Encoding") != "gzip" {
 		return w.Body.String()
 	}
 
@@ -58,9 +67,13 @@ func TestCompress_ShrinksHTMLAndStaysReadable(t *testing.T) {
 	want := strings.Repeat("<li>a sighting</li>", 500)
 	w := serve(t, "gzip", html(500))
 
-	assert.Equal(t, "gzip", w.Header().Get("Content-Encoding"))
+	// Taken before the body is read: unpacking it drains the recorder, and
+	// a length measured afterwards is zero however little was compressed.
+	compressed := w.Body.Len()
+
+	assert.Equal(t, "gzip", sent(w).Get("Content-Encoding"))
 	assert.Equal(t, want, body(t, w), "the body must survive the round trip unchanged")
-	assert.Less(t, w.Body.Len(), len(want)/5, "a page of repeated markup should shrink a long way")
+	assert.Less(t, compressed, len(want)/5, "a page of repeated markup should shrink a long way")
 }
 
 func TestCompress_LeavesABodyAloneWhenTheClientCannotReadIt(t *testing.T) {
@@ -69,7 +82,7 @@ func TestCompress_LeavesABodyAloneWhenTheClientCannotReadIt(t *testing.T) {
 	for _, accept := range []string{"", "deflate, br", "gzip;q=0", "identity"} {
 		w := serve(t, accept, html(10))
 
-		assert.Empty(t, w.Header().Get("Content-Encoding"), "Accept-Encoding %q does not offer gzip", accept)
+		assert.Empty(t, sent(w).Get("Content-Encoding"), "Accept-Encoding %q does not offer gzip", accept)
 		assert.Contains(t, w.Body.String(), "<li>a sighting</li>")
 	}
 }
@@ -81,7 +94,7 @@ func TestCompress_AlwaysSaysTheResponseVaries(t *testing.T) {
 	// asked for plain text, and the header is how it knows.
 	for _, accept := range []string{"gzip", ""} {
 		w := serve(t, accept, html(10))
-		assert.Contains(t, w.Header().Values("Vary"), "Accept-Encoding")
+		assert.Contains(t, sent(w).Values("Vary"), "Accept-Encoding")
 	}
 }
 
@@ -95,7 +108,7 @@ func TestCompress_LeavesAlreadyCompressedBodiesAlone(t *testing.T) {
 			_, _ = w.Write([]byte(strings.Repeat("x", 2048)))
 		})
 
-		assert.Empty(t, w.Header().Get("Content-Encoding"), "%s is already compressed", ct)
+		assert.Empty(t, sent(w).Get("Content-Encoding"), "%s is already compressed", ct)
 	}
 }
 
@@ -108,7 +121,7 @@ func TestCompress_DoesNotReEncode(t *testing.T) {
 		_, _ = io.WriteString(w, "already encoded")
 	})
 
-	assert.Equal(t, "br", w.Header().Get("Content-Encoding"))
+	assert.Equal(t, "br", sent(w).Get("Content-Encoding"))
 	assert.Equal(t, "already encoded", w.Body.String())
 }
 
@@ -125,9 +138,9 @@ func TestCompress_DropsTheLengthItJustInvalidated(t *testing.T) {
 		_, _ = io.WriteString(w, payload)
 	})
 
-	assert.Equal(t, "gzip", w.Header().Get("Content-Encoding"))
-	assert.Empty(t, w.Header().Get("Content-Length"))
-	assert.Empty(t, w.Header().Get("Accept-Ranges"), "ranges index the uncompressed body")
+	assert.Equal(t, "gzip", sent(w).Get("Content-Encoding"))
+	assert.Empty(t, sent(w).Get("Content-Length"))
+	assert.Empty(t, sent(w).Get("Accept-Ranges"), "ranges index the uncompressed body")
 	assert.Equal(t, strings.Repeat("<p>hello</p>", 200), body(t, w))
 }
 
@@ -154,7 +167,7 @@ func TestCompress_LeavesABodilessResponseAlone(t *testing.T) {
 		})
 
 		assert.Equal(t, status, w.Code)
-		assert.Empty(t, w.Header().Get("Content-Encoding"))
+		assert.Empty(t, sent(w).Get("Content-Encoding"))
 		assert.Empty(t, w.Body.Bytes())
 	}
 }
@@ -168,7 +181,7 @@ func TestCompress_SniffsATypeTheHandlerNeverSet(t *testing.T) {
 		_, _ = io.WriteString(w, "<!doctype html><title>a</title>"+strings.Repeat("<p>x</p>", 200))
 	})
 
-	assert.Equal(t, "gzip", w.Header().Get("Content-Encoding"))
+	assert.Equal(t, "gzip", sent(w).Get("Content-Encoding"))
 	assert.Contains(t, body(t, w), "<!doctype html>")
 }
 
@@ -178,5 +191,5 @@ func TestCompress_WritesNothingForAHandlerThatWroteNothing(t *testing.T) {
 	w := serve(t, "gzip", func(http.ResponseWriter, *http.Request) {})
 
 	assert.Empty(t, w.Body.Bytes(), "an empty handler must not produce a gzip header and trailer")
-	assert.Empty(t, w.Header().Get("Content-Encoding"))
+	assert.Empty(t, sent(w).Get("Content-Encoding"))
 }
