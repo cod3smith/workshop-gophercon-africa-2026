@@ -390,7 +390,8 @@ Expected: no output — vet clean, no failures.
 
 - [ ] **Step 5: Re-run the detector**
 
-Run: `"/Users/theforge/.claude/plugins/cache/impeccable/impeccable/4.5.0/skills/impeccable/scripts/impeccable" detect --json web/views web/assets`
+Run the impeccable skill's `detect --json` over `web/views web/assets` (the
+script lives in your own plugin cache, so use the path the skill reports).
 Expected: no new findings beyond the known `overused-font` (Inter), which is a separate `typeset` decision.
 
 - [ ] **Step 6: Commit**
@@ -718,4 +719,66 @@ does not (cheetah) and confirm both read correctly.
 
 ```bash
 git add internal/ web/ && git commit -m "feat: hear the animal, where a recording exists"
+```
+
+### Task 12: Make the round work on a small phone
+
+**Why:** measured on the running app, not inferred. The sticky `.guess__bar`
+grows as it wraps on narrow screens and clamps to the top of `.guess`:
+
+| Viewport | Bar height | Map visible above the bar |
+|---|---|---|
+| 375×812 | 140px | 235px |
+| 375×667 (iPhone SE 2/3) | 130px | **90px** |
+| 320×568 | **183px** | **0px** |
+
+At 320×568 the map is entirely covered and the game is playable only by typing
+coordinates. At 375×667 — one of the most common phones in use — the crosshair
+sits under the bar. Task 2 exists to make the photograph and the map co-visible;
+this is that requirement failing on the devices it was written for. The defect
+predates Tasks 9 and 10.
+
+**Files:**
+- Modify: `web/assets/css/app.css`
+- Modify: `web/views/pages/play.templ` only if the bar's content must change
+- Test: `web/views/pages/render_test.go`
+
+- [ ] **Step 1: Find why the bar is 183px at 320px wide**
+
+It is 140px at 375×812 and 183px at 320×568, so it is wrapping to more rows as
+width drops. Identify what wraps — the two readouts, the two buttons, or both —
+before changing anything. Record the measurement.
+
+- [ ] **Step 2: Shrink the bar on narrow screens**
+
+The bar must leave the map usable. Options, in preference order: put the two
+readouts on one line and the two buttons on the next; drop "Place pin at
+crosshair" below a width where the crosshair is reachable by tap anyway; or
+collapse the readouts to a single line that shows whichever is current. Do not
+remove the typed route or the submit button, and do not reintroduce `disabled`
+on `#guess-submit`.
+
+- [ ] **Step 3: Give the map a floor it cannot fall below**
+
+Whatever the bar does, the map needs a usable minimum on short viewports.
+`min-height` on `.guess .map` plus letting the page scroll is acceptable; the
+photograph may shrink further on these sizes, since the plate already links to
+the full-size image.
+
+- [ ] **Step 4: Measure, and make the numbers the acceptance criterion**
+
+At **320×568, 375×667 and 375×812**, with the greeting both folded and open:
+the map must show at least **120px above the bar**, and the crosshair must be
+within the visible band. Record every number.
+
+- [ ] **Step 5: Verify nothing else regressed**
+
+Run `go tool templ generate ./web/... && go test ./... 2>&1 | grep -E "FAIL|^---"`.
+Check 375×812 still matches the Task 2 baseline (photo ~197..391, map ~407..665)
+and that landscape at 812×375 still puts the photo and map side by side.
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add web/ && git commit -m "fix: leave the map usable on a small phone"
 ```
