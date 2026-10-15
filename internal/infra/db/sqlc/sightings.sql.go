@@ -12,6 +12,37 @@ import (
 	"uuid"
 )
 
+const sightingCount = `-- name: SightingCount :one
+SELECT COUNT(*)
+FROM sightings
+	JOIN species ON species.id = sightings.species_id
+WHERE (?1 IS NULL OR happened_at >= ?1)
+	AND (?2 IS NULL OR happened_at <= ?2)
+	AND (?3 = '' OR sightings.country_code = ?3)
+	AND (CAST(?4 AS BOOLEAN) OR species.gbif_key IN (SELECT value FROM json_each(?5)))
+`
+
+type SightingCountParams struct {
+	FromDate    interface{} `db:"from_date" json:"from_date"`
+	ToDate      interface{} `db:"to_date" json:"to_date"`
+	CountryCode interface{} `db:"country_code" json:"country_code"`
+	AnySpecies  bool        `db:"any_species" json:"any_species"`
+	SpeciesKeys interface{} `db:"species_keys" json:"species_keys"`
+}
+
+func (q *Queries) SightingCount(ctx context.Context, arg SightingCountParams) (int64, error) {
+	row := q.db.QueryRowContext(ctx, sightingCount,
+		arg.FromDate,
+		arg.ToDate,
+		arg.CountryCode,
+		arg.AnySpecies,
+		arg.SpeciesKeys,
+	)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const sightingCreate = `-- name: SightingCreate :one
 INSERT INTO sightings (
 	id,
@@ -109,6 +140,17 @@ func (q *Queries) SightingCreate(ctx context.Context, arg SightingCreateParams) 
 		&i.Media,
 	)
 	return i, err
+}
+
+const sightingEarliest = `-- name: SightingEarliest :one
+SELECT happened_at FROM sightings ORDER BY happened_at ASC, id ASC LIMIT 1
+`
+
+func (q *Queries) SightingEarliest(ctx context.Context) (time.Time, error) {
+	row := q.db.QueryRowContext(ctx, sightingEarliest)
+	var happened_at time.Time
+	err := row.Scan(&happened_at)
+	return happened_at, err
 }
 
 const sightingFind = `-- name: SightingFind :one
@@ -261,6 +303,17 @@ func (q *Queries) SightingFindByGbifKey(ctx context.Context, gbifKey int64) (Sig
 	return i, err
 }
 
+const sightingLatest = `-- name: SightingLatest :one
+SELECT happened_at FROM sightings ORDER BY happened_at DESC, id DESC LIMIT 1
+`
+
+func (q *Queries) SightingLatest(ctx context.Context) (time.Time, error) {
+	row := q.db.QueryRowContext(ctx, sightingLatest)
+	var happened_at time.Time
+	err := row.Scan(&happened_at)
+	return happened_at, err
+}
+
 const sightingList = `-- name: SightingList :many
 SELECT sightings.id, sightings.created_at, sightings.updated_at, sightings.gbif_key, sightings.occurrence_id, sightings.happened_at, sightings.basis_of_record, sightings.recorded_by, sightings.individual_count, sightings.remarks, sightings.reference_url, sightings.locality, sightings.state_province, sightings.country, sightings.country_code, sightings.latitude, sightings.longitude, sightings.coordinate_uncertainty_in_metres, sightings.elevation_in_metres, sightings.species_id, sightings.weather_id, sightings.media, species.id, species.created_at, species.updated_at, species.gbif_key, species.kingdom, species.phylum, species.class, species."order", species.family, species.genus, species.species, species.rank, species.scientific_name, species.canonical_name, species.vernacular_name, weather.id, weather.created_at, weather.updated_at, weather.observed_at, weather.temperature, weather.apparent_temperature, weather.humidity, weather.precipitation, weather.rain, weather.snowfall, weather.cloud_cover, weather.wind_speed, weather.wind_gusts, weather.wind_direction, weather.condition_code, weather.condition
 FROM sightings
@@ -271,7 +324,7 @@ WHERE (?1 IS NULL OR happened_at >= ?1)
 	AND (?3 = '' OR sightings.country_code = ?3)
 	AND (CAST(?4 AS BOOLEAN) OR species.gbif_key IN (SELECT value FROM json_each(?5)))
 ORDER BY sightings.happened_at DESC, sightings.id DESC
-LIMIT ?6
+LIMIT ?7 OFFSET ?6
 `
 
 type SightingListParams struct {
@@ -280,6 +333,7 @@ type SightingListParams struct {
 	CountryCode interface{} `db:"country_code" json:"country_code"`
 	AnySpecies  bool        `db:"any_species" json:"any_species"`
 	SpeciesKeys interface{} `db:"species_keys" json:"species_keys"`
+	Offset      int64       `db:"offset" json:"offset"`
 	Limit       int64       `db:"limit" json:"limit"`
 }
 
@@ -296,6 +350,7 @@ func (q *Queries) SightingList(ctx context.Context, arg SightingListParams) ([]S
 		arg.CountryCode,
 		arg.AnySpecies,
 		arg.SpeciesKeys,
+		arg.Offset,
 		arg.Limit,
 	)
 	if err != nil {
@@ -371,4 +426,33 @@ func (q *Queries) SightingList(ctx context.Context, arg SightingListParams) ([]S
 		return nil, err
 	}
 	return items, nil
+}
+
+const sightingTotals = `-- name: SightingTotals :one
+SELECT
+	COUNT(*) AS sightings,
+	COUNT(DISTINCT species.scientific_name) AS species,
+	COUNT(DISTINCT NULLIF(sightings.country, '')) AS countries,
+	CAST(COALESCE(SUM(json_array_length(sightings.media)), 0) AS INTEGER) AS media
+FROM sightings
+	JOIN species ON species.id = sightings.species_id
+`
+
+type SightingTotalsRow struct {
+	Sightings int64 `db:"sightings" json:"sightings"`
+	Species   int64 `db:"species" json:"species"`
+	Countries int64 `db:"countries" json:"countries"`
+	Media     int64 `db:"media" json:"media"`
+}
+
+func (q *Queries) SightingTotals(ctx context.Context) (SightingTotalsRow, error) {
+	row := q.db.QueryRowContext(ctx, sightingTotals)
+	var i SightingTotalsRow
+	err := row.Scan(
+		&i.Sightings,
+		&i.Species,
+		&i.Countries,
+		&i.Media,
+	)
+	return i, err
 }

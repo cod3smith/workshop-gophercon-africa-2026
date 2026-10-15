@@ -22,7 +22,31 @@ WHERE (sqlc.narg('from_date') IS NULL OR happened_at >= sqlc.narg('from_date'))
 	AND (sqlc.arg('country_code') = '' OR sightings.country_code = sqlc.arg('country_code'))
 	AND (CAST(sqlc.arg('any_species') AS BOOLEAN) OR species.gbif_key IN (SELECT value FROM json_each(sqlc.arg('species_keys'))))
 ORDER BY sightings.happened_at DESC, sightings.id DESC
-LIMIT sqlc.arg('limit');
+LIMIT sqlc.arg('limit') OFFSET sqlc.arg('offset');
+
+-- name: SightingCount :one
+SELECT COUNT(*)
+FROM sightings
+	JOIN species ON species.id = sightings.species_id
+WHERE (sqlc.narg('from_date') IS NULL OR happened_at >= sqlc.narg('from_date'))
+	AND (sqlc.narg('to_date') IS NULL OR happened_at <= sqlc.narg('to_date'))
+	AND (sqlc.arg('country_code') = '' OR sightings.country_code = sqlc.arg('country_code'))
+	AND (CAST(sqlc.arg('any_species') AS BOOLEAN) OR species.gbif_key IN (SELECT value FROM json_each(sqlc.arg('species_keys'))));
+
+-- name: SightingTotals :one
+SELECT
+	COUNT(*) AS sightings,
+	COUNT(DISTINCT species.scientific_name) AS species,
+	COUNT(DISTINCT NULLIF(sightings.country, '')) AS countries,
+	CAST(COALESCE(SUM(json_array_length(sightings.media)), 0) AS INTEGER) AS media
+FROM sightings
+	JOIN species ON species.id = sightings.species_id;
+
+-- name: SightingEarliest :one
+SELECT happened_at FROM sightings ORDER BY happened_at ASC, id ASC LIMIT 1;
+
+-- name: SightingLatest :one
+SELECT happened_at FROM sightings ORDER BY happened_at DESC, id DESC LIMIT 1;
 
 -- name: SightingCreate :one
 INSERT INTO sightings (

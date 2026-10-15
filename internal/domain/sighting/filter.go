@@ -8,12 +8,16 @@ import (
 
 // ListFilter narrows a listing. The zero value matches everything, so
 // callers only set the fields they care about.
+//
+// Limit and Offset window the listing rather than narrow it. The order is
+// total, so windows laid end to end cover the listing exactly once.
 type ListFilter struct {
 	FromDate *time.Time
 	ToDate   *time.Time
 	Country  country.Code
 	Animals  []species.Animal
 	Limit    int
+	Offset   int
 }
 
 // TaxonKeys returns the GBIF taxon keys the filter's animals stand for,

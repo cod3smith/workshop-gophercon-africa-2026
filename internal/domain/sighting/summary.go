@@ -20,6 +20,17 @@ type (
 		Earliest    time.Time
 		Latest      time.Time
 	}
+	// Totals are the headline figures for the whole record, counted by the
+	// store rather than from sightings held in memory, so a page of the
+	// record can state them without loading all of it.
+	Totals struct {
+		Sightings int
+		Species   int
+		Countries int
+		Media     int
+		Earliest  time.Time
+		Latest    time.Time
+	}
 	// Tally is one row of a leaderboard: a name and how often it appeared.
 	Tally struct {
 		Name  string

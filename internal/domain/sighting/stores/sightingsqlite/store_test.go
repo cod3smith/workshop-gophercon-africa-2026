@@ -206,10 +206,104 @@ func TestSighting_Store(t *testing.T) {
 			assert.Contains(t, all, got[0])
 		})
 
+		t.Run("Offset skips the first sightings", func(t *testing.T) {
+			ordered, err := store.List(ctx, sighting.ListFilter{})
+			require.NoError(t, err)
+			require.Len(t, ordered, 2)
+
+			got, err := store.List(ctx, sighting.ListFilter{Offset: 1})
+			require.NoError(t, err)
+			assert.Equal(t, ordered[1:], got)
+		})
+
+		t.Run("Offset past the end is empty", func(t *testing.T) {
+			got, err := store.List(ctx, sighting.ListFilter{Offset: 100})
+			require.NoError(t, err)
+			assert.Empty(t, got)
+		})
+
 		t.Run("Internal error", func(t *testing.T) {
 			got, err := failingStore.List(ctx, sighting.ListFilter{})
 			assert.ErrorIs(t, err, errInternal)
 			assert.Nil(t, got)
+		})
+	})
+
+	t.Run("List windows", func(t *testing.T) {
+		// Sightings sharing a moment are the case a missing tiebreaker
+		// gets wrong: the database is free to order them differently from
+		// one page to the next, so one repeats and another is skipped.
+		when := time.Date(2030, 1, 1, 12, 0, 0, 0, time.UTC)
+		for i := range 5 {
+			in := newCreateParams(lion.ID, conditions.ID, int64(900+i))
+			in.HappenedAt = when
+			_, err := store.Create(ctx, uuid.New(), in)
+			require.NoError(t, err)
+		}
+		t.Cleanup(func() {
+			_, err := conn.ExecContext(ctx, "DELETE FROM sightings WHERE gbif_key >= 900")
+			assert.NoError(t, err)
+		})
+
+		ordered, err := store.List(ctx, sighting.ListFilter{})
+		require.NoError(t, err)
+		require.Len(t, ordered, 7)
+
+		var paged []sighting.Sighting
+		for offset := 0; offset < len(ordered); offset += 2 {
+			page, err := store.List(ctx, sighting.ListFilter{Limit: 2, Offset: offset})
+			require.NoError(t, err)
+			paged = append(paged, page...)
+		}
+
+		// The windows, laid end to end, are the whole listing: nothing
+		// twice, nothing missing, in the same order.
+		assert.Equal(t, ordered, paged)
+	})
+
+	t.Run("Count", func(t *testing.T) {
+		t.Run("Counts every sighting regardless of paging", func(t *testing.T) {
+			got, err := store.Count(ctx, sighting.ListFilter{Limit: 1, Offset: 1})
+			require.NoError(t, err)
+			assert.Equal(t, 2, got)
+		})
+
+		t.Run("Honours the filter", func(t *testing.T) {
+			got, err := store.Count(ctx, sighting.ListFilter{Country: country.France})
+			require.NoError(t, err)
+			assert.Zero(t, got)
+
+			got, err = store.Count(ctx, sighting.ListFilter{Animals: []species.Animal{species.AnimalLion}})
+			require.NoError(t, err)
+			assert.Equal(t, 2, got)
+		})
+
+		t.Run("Internal error", func(t *testing.T) {
+			_, err := failingStore.Count(ctx, sighting.ListFilter{})
+			assert.ErrorIs(t, err, errInternal)
+		})
+	})
+
+	t.Run("Totals", func(t *testing.T) {
+		t.Run("Describes the whole record", func(t *testing.T) {
+			got, err := store.Totals(ctx)
+			require.NoError(t, err)
+
+			all, err := store.List(ctx, sighting.ListFilter{})
+			require.NoError(t, err)
+			want := sighting.Summarise(all)
+
+			assert.Equal(t, want.Sightings, got.Sightings)
+			assert.Equal(t, want.Species, got.Species)
+			assert.Equal(t, want.Countries, got.Countries)
+			assert.Equal(t, want.Media, got.Media)
+			assert.True(t, want.Earliest.Equal(got.Earliest), "earliest %v, want %v", got.Earliest, want.Earliest)
+			assert.True(t, want.Latest.Equal(got.Latest), "latest %v, want %v", got.Latest, want.Latest)
+		})
+
+		t.Run("Internal error", func(t *testing.T) {
+			_, err := failingStore.Totals(ctx)
+			assert.ErrorIs(t, err, errInternal)
 		})
 	})
 }

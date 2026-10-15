@@ -20,6 +20,8 @@ type Store interface {
 	Find(ctx context.Context, id uuid.UUID) (Sighting, error)
 	FindByGbifKey(ctx context.Context, gbifKey int) (Sighting, error)
 	List(ctx context.Context, filter ListFilter) ([]Sighting, error)
+	Count(ctx context.Context, filter ListFilter) (int, error)
+	Totals(ctx context.Context) (Totals, error)
 	Create(ctx context.Context, id uuid.UUID, in CreateParams) (Sighting, error)
 }
 
@@ -105,6 +107,17 @@ func (s Service) List(ctx context.Context, filter ListFilter) ([]Sighting, error
 	}
 
 	return sightings, nil
+}
+
+// Count returns how many sightings match the filter, ignoring its Limit
+// and Offset, so a caller can say how many pages there are.
+func (s Service) Count(ctx context.Context, filter ListFilter) (int, error) {
+	return s.store.Count(ctx, filter)
+}
+
+// Totals returns the headline figures for the whole record.
+func (s Service) Totals(ctx context.Context) (Totals, error) {
+	return s.store.Totals(ctx)
 }
 
 // Create validates the params and assigns the sighting its identity

@@ -6,15 +6,20 @@ package db
 
 import (
 	"context"
+	"time"
 
 	"uuid"
 )
 
 type Querier interface {
+	SightingCount(ctx context.Context, arg SightingCountParams) (int64, error)
 	SightingCreate(ctx context.Context, arg SightingCreateParams) (Sighting, error)
+	SightingEarliest(ctx context.Context) (time.Time, error)
 	SightingFind(ctx context.Context, id uuid.UUID) (SightingFindRow, error)
 	SightingFindByGbifKey(ctx context.Context, gbifKey int64) (SightingFindByGbifKeyRow, error)
+	SightingLatest(ctx context.Context) (time.Time, error)
 	SightingList(ctx context.Context, arg SightingListParams) ([]SightingListRow, error)
+	SightingTotals(ctx context.Context) (SightingTotalsRow, error)
 	SpeciesCreate(ctx context.Context, arg SpeciesCreateParams) (Species, error)
 	SpeciesFind(ctx context.Context, id uuid.UUID) (Species, error)
 	SpeciesFindByGbifKey(ctx context.Context, gbifKey int64) (Species, error)

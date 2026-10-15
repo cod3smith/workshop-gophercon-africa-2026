@@ -50,7 +50,9 @@ func (s Store) FindByGbifKey(ctx context.Context, gbifKey int) (sighting.Sightin
 	return transform(db.SightingListRow(row))
 }
 
-// List returns every sighting matching filter.
+// List returns the sightings matching filter, newest first. Sightings
+// from the same moment are ordered by ID, so the order is total and the
+// windows Limit and Offset cut from it never overlap.
 func (s Store) List(ctx context.Context, filter sighting.ListFilter) ([]sighting.Sighting, error) {
 	// The keys go in as one JSON array rather than through sqlc.slice, which
 	// expands at runtime and throws SQLite's numbered placeholders out for
@@ -60,7 +62,8 @@ func (s Store) List(ctx context.Context, filter sighting.ListFilter) ([]sighting
 		return nil, err
 	}
 
-	// SQLite reads a negative limit as no limit.
+	// SQLite reads a negative limit as no limit, and will not take an
+	// offset without one.
 	limit := int64(filter.Limit)
 	if limit <= 0 {
 		limit = -1
@@ -73,6 +76,7 @@ func (s Store) List(ctx context.Context, filter sighting.ListFilter) ([]sighting
 		AnySpecies:  len(filter.Animals) == 0,
 		SpeciesKeys: string(keys),
 		Limit:       limit,
+		Offset:      int64(max(filter.Offset, 0)),
 	})
 	if err != nil {
 		return nil, err
@@ -93,6 +97,59 @@ func (s Store) List(ctx context.Context, filter sighting.ListFilter) ([]sighting
 	}
 
 	return result, nil
+}
+
+// Count returns how many sightings match filter, whatever its Limit and
+// Offset say.
+func (s Store) Count(ctx context.Context, filter sighting.ListFilter) (int, error) {
+	keys, err := json.Marshal(filter.TaxonKeys())
+	if err != nil {
+		return 0, err
+	}
+
+	n, err := s.queries.SightingCount(ctx, db.SightingCountParams{
+		FromDate:    filter.FromDate,
+		ToDate:      filter.ToDate,
+		CountryCode: filter.Country.String(),
+		AnySpecies:  len(filter.Animals) == 0,
+		SpeciesKeys: string(keys),
+	})
+	if err != nil {
+		return 0, err
+	}
+
+	return int(n), nil
+}
+
+// Totals returns the headline figures for the whole record.
+//
+// The first and last moments are read as typed columns rather than as the
+// text MIN and MAX return: rows written by the seed and rows written since
+// carry their time zone in different forms, and only the driver reads both.
+func (s Store) Totals(ctx context.Context) (sighting.Totals, error) {
+	row, err := s.queries.SightingTotals(ctx)
+	if err != nil {
+		return sighting.Totals{}, err
+	}
+
+	totals := sighting.Totals{
+		Sightings: int(row.Sightings),
+		Species:   int(row.Species),
+		Countries: int(row.Countries),
+		Media:     int(row.Media),
+	}
+	if totals.Sightings == 0 {
+		return totals, nil
+	}
+
+	if totals.Earliest, err = s.queries.SightingEarliest(ctx); err != nil {
+		return sighting.Totals{}, err
+	}
+	if totals.Latest, err = s.queries.SightingLatest(ctx); err != nil {
+		return sighting.Totals{}, err
+	}
+
+	return totals, nil
 }
 
 // Create persists a new sighting under id, or returns
