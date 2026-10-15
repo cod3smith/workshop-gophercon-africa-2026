@@ -177,12 +177,14 @@ templ Answer(props AnswerProps) {
 					<span class="result__points-label">points</span>
 				</p>
 			</header>
-			<div class="map map--answer" data-safari-map="safari-map" role="img" aria-label="Your guess and where the animal was really seen">
-				<p class="map__fallback">{ distanceLabel(props.Result.DistanceKm) }</p>
-			</div>
+			<!--
+				The animal leads. The verdict says how far out the guess was, but the
+				player has been waiting a whole round to learn what the animal was, and
+				under the map that answer started below a phone's first screen.
+			-->
 			<div class="reveal">
 				<figure class="reveal__plate">
-					<img src={ PhotoURL(photo(props.Sighting), "large") } width="1024" height="1024" alt={ speciesName(props.Sighting) }/>
+					<img src={ PhotoURL(photo(props.Sighting), "medium") } width="500" height="500" alt={ speciesName(props.Sighting) }/>
 					<figcaption>{ Credit(photo(props.Sighting), props.Sighting.Species.ScientificName) }</figcaption>
 				</figure>
 				<div class="reveal__body">
@@ -190,37 +192,43 @@ templ Answer(props AnswerProps) {
 					if props.Sighting.Species.ScientificName != "" {
 						<p class="reveal__scientific">{ props.Sighting.Species.ScientificName }</p>
 					}
-					<dl class="clues">
-						<div class="clue">
-							<dt>Seen at</dt>
-							<dd>{ place(props.Sighting.Location) }</dd>
-						</div>
-						<div class="clue">
-							<dt>On</dt>
-							<dd>{ props.Sighting.HappenedAt.Format("2 January 2006") }</dd>
-						</div>
-						<div class="clue">
-							<dt>Position</dt>
-							<dd class="mono">
-								{ strconv.FormatFloat(props.Sighting.Location.Latitude, 'f', 4, 64) },
-								{ strconv.FormatFloat(props.Sighting.Location.Longitude, 'f', 4, 64) }
-							</dd>
-						</div>
-					</dl>
-					if props.Sighting.ReferenceURL != "" {
-						<p>
-							<a class="link" href={ templ.URL(props.Sighting.ReferenceURL) } rel="noopener">
-								The original record on GBIF
-							</a>
-						</p>
-					}
 				</div>
 			</div>
+			<div class="map map--answer" data-safari-map="safari-map" role="img" aria-label="Your guess and where the animal was really seen">
+				<p class="map__fallback">{ distanceLabel(props.Result.DistanceKm) }</p>
+			</div>
+			<div class="reveal__facts">
+				<dl class="clues">
+					<div class="clue">
+						<dt>Seen at</dt>
+						<dd>{ place(props.Sighting.Location) }</dd>
+					</div>
+					<div class="clue">
+						<dt>On</dt>
+						<dd>{ props.Sighting.HappenedAt.Format("2 January 2006") }</dd>
+					</div>
+					<div class="clue">
+						<dt>Position</dt>
+						<dd class="mono">
+							{ strconv.FormatFloat(props.Sighting.Location.Latitude, 'f', 4, 64) },
+							{ strconv.FormatFloat(props.Sighting.Location.Longitude, 'f', 4, 64) }
+						</dd>
+					</div>
+				</dl>
+				if props.Sighting.ReferenceURL != "" {
+					<p>
+						<a class="link" href={ templ.URL(props.Sighting.ReferenceURL) } rel="noopener">
+							The original record on GBIF
+						</a>
+					</p>
+				}
+			</div>
+			<!-- Pinned like the question's bar, so the next step is never hunted for below the map. -->
 			<div class="result__actions">
 				if props.Game.Complete() {
-					<a class="button button--primary" href="/play">See how you did</a>
+					<a class="button button--primary button--large" href="/play">See how you did</a>
 				} else {
-					<a class="button button--primary" href="/play">Next round</a>
+					<a class="button button--primary button--large" href="/play">Next round</a>
 				}
 			</div>
 		</section>
@@ -239,7 +247,7 @@ templ Over(props OverProps) {
 		Map:   len(finalMap(props).Rounds) > 0,
 		Class: "is-playing",
 	}) {
-		<section class={ "final", gameTone(props.Game) }>
+		<section class="final">
 			<p class="final__eyebrow">{ game.Name }</p>
 			<p class="final__score">
 				<span class="final__total">{ thousands(props.Game.Total()) }</span>
@@ -249,6 +257,20 @@ templ Over(props OverProps) {
 			if best := props.bestLine(); best != "" {
 				<p class={ "final__best", props.bestTone() }>{ best }</p>
 			}
+			<!--
+				The share line is the one thing here built to spread the game, and
+				Play again the one thing the player does next, so they follow the
+				score; the rounds they have just lived through come after.
+			-->
+			<div class="share">
+				<h2 class="share__title">Dare a friend to beat it</h2>
+				<pre class="share__text" id="share-text">{ props.Game.Share(props.URL) }</pre>
+				<button class="button" type="button" data-copy="share-text">Copy result</button>
+			</div>
+			<div class="final__actions">
+				<a class="button button--primary" href="/play/new">Play again</a>
+				<a class="button" href="/">Browse the record</a>
+			</div>
 			<ol class="rounds">
 				for i, result := range props.Game.Results {
 					<li class={ "rounds__row", ToneFor(result.Points) }>
@@ -279,15 +301,6 @@ templ Over(props OverProps) {
 				<div class="map map--final" data-safari-map="safari-map" role="img" aria-label="Where each animal was seen, with your guess beside it" hidden></div>
 				@templ.JSONScript("safari-map", finalMap(props))
 			}
-			<div class="share">
-				<h2 class="share__title">Brag about it</h2>
-				<pre class="share__text" id="share-text">{ props.Game.Share(props.URL) }</pre>
-				<button class="button" type="button" data-copy="share-text">Copy result</button>
-			</div>
-			<div class="final__actions">
-				<a class="button button--primary" href="/play/new">Play again</a>
-				<a class="button" href="/">Browse the record</a>
-			</div>
 		</section>
 	}
 }

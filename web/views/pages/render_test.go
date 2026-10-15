@@ -456,7 +456,132 @@ func TestOver_DrawsTheMedalsRatherThanEmojiTheyCanVanishAs(t *testing.T) {
 	html := renderOver(t, pages.OverProps{Game: g, Sightings: played})
 
 	assert.Equal(t, game.Rounds, strings.Count(html, `class="medal"`), "one drawn square per round")
+	// The share block now precedes the list, and it does carry emoji (they
+	// are what gets pasted), so look at the list itself.
+	list := regexp.MustCompile(`(?s)<ol class="rounds">.*?</ol>`).FindString(html)
+	require.NotEmpty(t, list)
 	for _, emoji := range []string{"🟩", "🟨", "🟧", "⬛"} {
-		assert.NotContains(t, html[:strings.Index(html, `id="share-text"`)], emoji, "the rounds list is drawn, not typed")
+		assert.NotContains(t, list, emoji, "the rounds list is drawn, not typed")
+	}
+}
+
+func renderAnswer(t *testing.T, props pages.AnswerProps) string {
+	t.Helper()
+
+	var buf bytes.Buffer
+	require.NoError(t, pages.Answer(props).Render(context.Background(), &buf))
+	return buf.String()
+}
+
+// answered is a scored round over a humpback whale, and the page it makes.
+func answered(t *testing.T) string {
+	t.Helper()
+
+	s := sighting.Sighting{
+		ID:       uuid.New(),
+		Location: sighting.Location{Locality: "Hermanus", Coordinates: sighting.Coordinates{Latitude: -34.4, Longitude: 19.2}},
+		Media:    []sighting.Media{{Type: "StillImage", URL: "https://inaturalist-open-data.s3.amazonaws.com/photos/1/original.jpeg"}},
+	}
+	s.Species.VernacularName = "humpback whale"
+
+	// Four rounds are still to come, so the control reads "Next round".
+	ids := []uuid.UUID{s.ID}
+	for len(ids) < game.Rounds {
+		ids = append(ids, uuid.New())
+	}
+
+	g := game.New(ids)
+	result := game.Result{DistanceKm: 900, Points: game.ScoreFor(900)}
+	g.Record(result)
+
+	return renderAnswer(t, pages.AnswerProps{Game: g, Sighting: s, Result: result})
+}
+
+// The answer is the one thing the player has been waiting for, so it
+// leads: when it sat under the map it started below a phone's first screen.
+func TestAnswer_NamesTheAnimalBeforeTheMap(t *testing.T) {
+	t.Parallel()
+
+	html := answered(t)
+
+	name := strings.Index(html, `class="reveal__name"`)
+	require.GreaterOrEqual(t, name, 0, "the page should name the animal")
+	require.GreaterOrEqual(t, strings.Index(html, `class="map`), 0, "the page should carry the map")
+
+	assert.Less(t, name, strings.Index(html, `class="map`), "the animal is named above the map")
+	assert.Greater(t, name, strings.Index(html, `class="result__head`), "the score still opens the screen")
+}
+
+func TestAnswer_ShowsTheAnimalAtASmallSize(t *testing.T) {
+	t.Parallel()
+
+	html := answered(t)
+
+	// A thumbnail beside the name does not need the 2048-pixel original,
+	// nor the large copy the question was played on.
+	img := regexp.MustCompile(`<img[^>]*src="[^"]*photos/1/[^"]*"[^>]*>`).FindString(html)
+	require.NotEmpty(t, img)
+	assert.Contains(t, img, "photos/1/medium.jpeg")
+	assert.Less(t, strings.Index(html, "photos/1/medium.jpeg"), strings.Index(html, `class="map`), "the photograph is shown with the name, above the map")
+}
+
+func TestAnswer_KeepsNextRoundInABarThatFollowsTheMap(t *testing.T) {
+	t.Parallel()
+
+	html := answered(t)
+
+	// The bar is pinned in CSS, so what the markup can promise is that it
+	// is one element after everything it acts on, with the control inside.
+	bar := strings.Index(html, `class="result__actions"`)
+	require.GreaterOrEqual(t, bar, 0)
+	assert.Greater(t, bar, strings.Index(html, `class="map`))
+	assert.Greater(t, strings.Index(html, "Next round"), bar, "Next round lives in the bar")
+}
+
+// The share line is the one mechanism designed to spread the game, and the
+// only thing the player does next is play again, so neither waits behind a
+// list of rounds they have just lived through.
+func TestOver_SharesAndOffersAnotherGameBeforeTheDetail(t *testing.T) {
+	t.Parallel()
+
+	g, played := finished([]float64{7.2, 900, 3000, 6000, 9000})
+	html := renderOver(t, pages.OverProps{Game: g, Sightings: played, URL: "https://safari.example.test/play"})
+
+	rounds := strings.Index(html, `class="rounds"`)
+	require.GreaterOrEqual(t, rounds, 0)
+
+	for _, marker := range []string{`class="final__best`, `class="share"`, `href="/play/new"`} {
+		require.GreaterOrEqual(t, strings.Index(html, marker), 0, marker)
+	}
+
+	assert.Less(t, strings.Index(html, `class="final__best`), strings.Index(html, `class="share"`), "the best line stays above the share")
+	assert.Less(t, strings.Index(html, `class="share"`), rounds, "the share comes before the rounds list")
+	assert.Less(t, strings.Index(html, `href="/play/new"`), rounds, "Play again comes before the rounds list")
+	assert.Less(t, rounds, strings.Index(html, `data-safari-map`), "the map closes the page")
+}
+
+func TestOver_DoesNotBragInTheShareTitle(t *testing.T) {
+	t.Parallel()
+
+	g, played := finished([]float64{9000, 9000, 9000, 9000, 9000})
+	html := renderOver(t, pages.OverProps{Game: g, Sightings: played})
+
+	assert.NotContains(t, html, "Brag about it", "a weak run is nothing to brag about")
+}
+
+// A low total used to paint the rank in the alarm colour, on top of a low
+// number: the same bad news said twice, the second time as a scolding.
+func TestOver_DoesNotToneTheRankByTheTotal(t *testing.T) {
+	t.Parallel()
+
+	for name, distances := range map[string][]float64{
+		"a strong run": {1, 1, 1, 1, 1},
+		"a weak run":   {9000, 9000, 9000, 9000, 9000},
+	} {
+		g, played := finished(distances)
+		html := renderOver(t, pages.OverProps{Game: g, Sightings: played})
+
+		assert.Contains(t, html, `<section class="final">`, name+": the section carries no tone, so the rank has none to read")
+		assert.Contains(t, html, `rounds__row is-`, name+": the rounds keep theirs")
 	}
 }

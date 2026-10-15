@@ -787,8 +787,8 @@ a:hover {
 }
 
 /* Five places and five guesses can be a continent apart, so it is a little
-   taller than the single-round answer map. It sits under the list of
-   rounds and above the share block, with the list's own spacing. */
+   taller than the single-round answer map. It closes the page, under the
+   list of rounds, with the list's own spacing. */
 .map--final {
 	aspect-ratio: 16 / 10;
 	margin-bottom: 2.5rem;
@@ -907,7 +907,7 @@ a:hover {
 .result {
 	display: grid;
 	gap: 1.5rem;
-	padding-bottom: 4rem;
+	padding-bottom: 2rem;
 }
 
 .result__head {
@@ -959,11 +959,22 @@ a:hover {
 	text-transform: uppercase;
 }
 
+/* The animal, opening the answer: a small photograph beside the name, so
+   the one thing the player has been waiting for is on the first screen. */
 .reveal {
 	display: grid;
-	grid-template-columns: minmax(0, 20rem) minmax(0, 1fr);
+	grid-template-columns: 9rem minmax(0, 1fr);
 	gap: 1.5rem;
-	align-items: start;
+	align-items: center;
+	padding: 1.5rem;
+	border: 1px solid var(--line);
+	border-radius: var(--radius);
+	background: var(--surface);
+}
+
+/* What is left once the name is out: where and when it really was, which
+   reads against the map above it. */
+.reveal__facts {
 	padding: 1.5rem;
 	border: 1px solid var(--line);
 	border-radius: var(--radius);
@@ -998,15 +1009,20 @@ a:hover {
 }
 
 .reveal__scientific {
-	margin: 0.2rem 0 1.2rem;
+	margin: 0.2rem 0 0;
 	color: var(--paper-dim);
 	font-family: var(--display);
 	font-size: 1.05rem;
 	font-style: italic;
 }
 
-.reveal__body .clues {
-	margin-bottom: 1.2rem;
+.reveal__facts p {
+	margin: 1.2rem 0 0;
+}
+
+/* Tabbing to the link must not scroll it under the pinned bar (WCAG 2.4.11). */
+.reveal__facts a {
+	scroll-margin-bottom: 7rem;
 }
 
 .result__actions,
@@ -1016,6 +1032,17 @@ a:hover {
 	flex-wrap: wrap;
 	gap: 0.8rem;
 	justify-content: center;
+}
+
+.result__actions {
+	/* Pinned to the bottom of the screen while the answer is read, as the
+	   question's bar is, so "Next round" never has to be hunted for. */
+	position: sticky;
+	bottom: 0;
+	z-index: 500;
+	padding: 0.7rem 0;
+	border-top: 1px solid var(--line);
+	background: var(--ink);
 }
 
 /* --- The final score ---------------------------------------------------- */
@@ -1057,13 +1084,16 @@ a:hover {
 	font-size: 1.2rem;
 }
 
+/* Always --paper: the number above already says how the run went, and a
+   weak total used to paint its own name in the alarm colour, scolding twice.
+   The rounds below keep their tones. */
 .final__rank {
 	margin: 0.6rem 0 1rem;
 	font-family: var(--display);
 	font-size: clamp(1.8rem, 5vw, 2.8rem);
 	font-weight: 500;
 	font-style: italic;
-	color: var(--tone, var(--paper));
+	color: var(--paper);
 }
 
 /* The best moment, stated in the colour of how well it went. The number
@@ -1169,6 +1199,11 @@ a:hover {
 	border: 1px solid var(--line);
 	border-radius: var(--radius);
 	background: var(--surface);
+	margin-bottom: 1.5rem;
+}
+
+/* Between the share block and the rounds list, which it used to follow. */
+.final__actions {
 	margin-bottom: 2.5rem;
 }
 
@@ -1253,8 +1288,7 @@ a:hover {
 /* --- Narrow screens ----------------------------------------------------- */
 
 @media (max-width: 60rem) {
-	.round,
-	.reveal {
+	.round {
 		grid-template-columns: minmax(0, 1fr);
 	}
 
@@ -1371,15 +1405,33 @@ a:hover {
 		aspect-ratio: 4 / 3;
 	}
 
-	.reveal__plate img {
-		aspect-ratio: 16 / 9;
+	/* The photograph stays small and beside the name rather than stacking
+	   over it: stacked, the name was back below the first screen. */
+	.reveal {
+		grid-template-columns: 6rem minmax(0, 1fr);
+		gap: 1rem;
+		padding: 1rem;
+	}
+
+	.reveal__facts {
+		padding: 1rem;
+	}
+
+	.result__actions {
+		gap: 0.4rem 0.6rem;
+		padding: 0.5rem 0;
+	}
+
+	.result__actions .button {
+		flex: 1 1 auto;
 	}
 }
 
 /* A short viewport, such as a phone on its side: the pinned bar would
    cross the map's top edge, so let it flow, and size the map to the height. */
 @media (max-height: 30rem) {
-	.guess__bar {
+	.guess__bar,
+	.result__actions {
 		position: static;
 	}
 

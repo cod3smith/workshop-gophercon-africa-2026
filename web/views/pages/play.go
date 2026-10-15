@@ -333,12 +333,6 @@ func ToneFor(points int) string {
 	}
 }
 
-// gameTone is the same judgement over a whole game, by what an average
-// round of it was worth.
-func gameTone(g game.Game) string {
-	return ToneFor(g.Total() * game.MaxRoundScore / game.MaxScore)
-}
-
 // verdict is a word for how good a guess was, so the number means
 // something at a glance.
 func verdict(km float64) string {
