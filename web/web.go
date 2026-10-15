@@ -20,8 +20,9 @@ import (
 //go:embed assets
 var assets embed.FS
 
-// New returns a ServeMux serving the static assets and handler's patterns.
-func New(logger *slog.Logger, config config.Config, sightingsSvc *sighting.Service, gamesSvc *game.Service, sounds handlers.SoundService) *http.ServeMux {
+// New returns a handler serving the static assets and handler's patterns,
+// with text responses gzipped for clients that can read them.
+func New(logger *slog.Logger, config config.Config, sightingsSvc *sighting.Service, gamesSvc *game.Service, sounds handlers.SoundService) http.Handler {
 	mux := http.NewServeMux()
 
 	// One signing key for the whole run, shared by every game cookie.
@@ -37,7 +38,7 @@ func New(logger *slog.Logger, config config.Config, sightingsSvc *sighting.Servi
 	mux.Handle("POST /play/guess", handlers.Guess(logger, gamesSvc, session, sounds))
 	mux.Handle("GET /", handlers.NotFound(logger))
 
-	return mux
+	return compress(mux)
 }
 
 func assetsFs(prod bool) fs.FS {
