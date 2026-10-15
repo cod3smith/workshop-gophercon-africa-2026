@@ -1074,3 +1074,110 @@ func TestRecord_WindReadsAsWords(t *testing.T) {
 		})
 	}
 }
+
+// globeRecord is two sightings: one the globe can plot, one nobody wrote a
+// position for.
+func globeRecord() (placed, unplaced sighting.Sighting) {
+	placed = sighting.Sighting{
+		ID:         uuid.New(),
+		HappenedAt: time.Date(2024, time.March, 9, 0, 0, 0, 0, time.UTC),
+		Location: sighting.Location{
+			Locality:    "Maasai Mara",
+			Country:     "Kenya",
+			Coordinates: sighting.Coordinates{Latitude: -1.4061, Longitude: 35.0117},
+		},
+		Species: species.Species{Class: "Mammalia", VernacularName: "lion"},
+	}
+	unplaced = sighting.Sighting{
+		ID:         uuid.New(),
+		HappenedAt: time.Date(2023, time.July, 2, 0, 0, 0, 0, time.UTC),
+		Location:   sighting.Location{Country: "Namibia"},
+		Species:    species.Species{Class: "Aves", VernacularName: "Verreaux's eagle"},
+	}
+
+	return placed, unplaced
+}
+
+func renderGlobe(t *testing.T, sightings ...sighting.Sighting) string {
+	t.Helper()
+
+	var buf bytes.Buffer
+	require.NoError(t, pages.Globe(pages.GlobeProps{Sightings: sightings}).Render(context.Background(), &buf))
+
+	return buf.String()
+}
+
+func TestGlobe_ListsEverySightingAsALinkWithNoScriptAtAll(t *testing.T) {
+	t.Parallel()
+
+	lion, eagle := globeRecord()
+	html := renderGlobe(t, lion, eagle)
+
+	// The list is the page. A visitor with no WebGL, no three.js or no
+	// JavaScript at all still gets every sighting, as a link they can
+	// follow, in the HTML the server sent.
+	assert.Contains(t, html, `href="/record/`+lion.ID.String()+`"`)
+	assert.Contains(t, html, `href="/record/`+eagle.ID.String()+`"`)
+	assert.Contains(t, html, "Lion")
+	assert.Contains(t, html, "Maasai Mara, Kenya")
+
+	// The one with no position is listed, and says why it is not a point,
+	// rather than being quietly dropped from the page as it is from the feed.
+	assert.Contains(t, html, "No position recorded")
+
+	// And the stage says what it needs, for the visitor who will never see it.
+	assert.Contains(t, html, "The globe is drawn with WebGL")
+}
+
+func TestGlobe_NamesEachClassWithItsCount(t *testing.T) {
+	t.Parallel()
+
+	lion, eagle := globeRecord()
+	second := lion
+	second.ID = uuid.New()
+
+	html := renderGlobe(t, lion, second, eagle)
+
+	// Commonest first, each with the plain-English name and its count. The
+	// Latin stays on the row, because that is what the colour is keyed by.
+	rows := regexp.MustCompile(`(?s)<li class="globe__class"[^>]*>.*?</li>`).FindAllString(html, -1)
+	require.Len(t, rows, 2, "one row per class present, and no row for a class that is not")
+
+	assert.Contains(t, rows[0], `data-class="Mammalia"`)
+	assert.Contains(t, rows[0], "Mammals")
+	assert.Contains(t, rows[0], ">2<")
+	assert.Contains(t, rows[1], `data-class="Aves"`)
+	assert.Contains(t, rows[1], "Birds")
+	assert.Contains(t, rows[1], ">1<")
+
+	// The page states the gap between what it holds and what it can plot.
+	assert.Contains(t, html, "2 of 3 sightings")
+}
+
+func TestGlobe_ShipsTheGlobeOnlyControlsHiddenAndLeavesShowingThemToTheScript(t *testing.T) {
+	t.Parallel()
+
+	lion, eagle := globeRecord()
+	html := renderGlobe(t, lion, eagle)
+
+	// Each of these does nothing at all without a globe to do it to, so
+	// none of them may arrive usable: a button that turns a sphere that
+	// isn't there is a trap for the keyboard. globe.js unhides them once
+	// the sphere exists.
+	for _, selector := range []string{"globe__locate", "globe__controls", "globe__card", "globe__hint"} {
+		tag := regexp.MustCompile(`<[a-z]+ [^>]*class="` + selector + `"[^>]*>`).FindString(html)
+		require.NotEmpty(t, tag, "the page should carry %q", selector)
+		assert.Contains(t, tag, "hidden", "%q should ship hidden", selector)
+	}
+
+	// One locate button, for the one sighting there is anywhere to find.
+	assert.Len(t, regexp.MustCompile(`class="globe__locate"`).FindAllString(html, -1), 1)
+	assert.Contains(t, html, `data-globe-locate="`+lion.ID.String()+`"`)
+	assert.NotContains(t, html, `data-globe-locate="`+eagle.ID.String()+`"`)
+
+	// The card's link is not a link until the script has a record for it to
+	// point at, so there is nothing to tab to and nowhere to go.
+	card := regexp.MustCompile(`(?s)<div class="globe__card".*?</div>\s*</div>`).FindString(html)
+	require.NotEmpty(t, card)
+	assert.NotContains(t, card, "href=", "the card's link gets its address from the sighting that opens it")
+}

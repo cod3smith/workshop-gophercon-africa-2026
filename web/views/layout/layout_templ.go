@@ -19,6 +19,9 @@ type BaseProps struct {
 	// Map loads Leaflet, which only the game needs, so every other page
 	// is served without it.
 	Map bool
+	// Globe loads three.js, which only the globe needs. Half a megabyte of
+	// renderer has no business on a page that is not drawing one.
+	Globe bool
 	// Class marks the body, so a page can restyle the chrome around it.
 	Class string
 	// FooterGopher sends a gopher along the top of the footer. It is
@@ -55,7 +58,7 @@ func Base(props BaseProps) templ.Component {
 		var templ_7745c5c3_Var2 string
 		templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.JoinStringErrs(props.Title)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/views/layout/layout.templ`, Line: 28, Col: 23}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/views/layout/layout.templ`, Line: 31, Col: 23}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var2))
 		if templ_7745c5c3_Err != nil {
@@ -68,7 +71,7 @@ func Base(props BaseProps) templ.Component {
 		var templ_7745c5c3_Var3 string
 		templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.ResolveAttributeValue(props.Description)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/views/layout/layout.templ`, Line: 29, Col: 55}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/views/layout/layout.templ`, Line: 32, Col: 55}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var3)
 		if templ_7745c5c3_Err != nil {
@@ -81,7 +84,7 @@ func Base(props BaseProps) templ.Component {
 		var templ_7745c5c3_Var4 string
 		templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.ResolveAttributeValue(props.Title)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/views/layout/layout.templ`, Line: 32, Col: 50}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/views/layout/layout.templ`, Line: 35, Col: 50}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var4)
 		if templ_7745c5c3_Err != nil {
@@ -94,7 +97,7 @@ func Base(props BaseProps) templ.Component {
 		var templ_7745c5c3_Var5 string
 		templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.ResolveAttributeValue(props.Description)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/views/layout/layout.templ`, Line: 33, Col: 62}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/views/layout/layout.templ`, Line: 36, Col: 62}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var5)
 		if templ_7745c5c3_Err != nil {
@@ -176,7 +179,13 @@ func Base(props BaseProps) templ.Component {
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 16, "<script src=\"/assets/js/app.js\" defer></script></body></html>")
+		if props.Globe {
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 16, "<!--\n\t\t\t\t\tr160 is the last three.js that ships a build with a global THREE,\n\t\t\t\t\twhich is what a site with no bundler can use. Pinned to the exact\n\t\t\t\t\tversion with its hash, as Leaflet is: a script this size, from\n\t\t\t\t\tsomebody else's server, should not be able to change under us.\n\t\t\t\t--> <script src=\"https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.min.js\" integrity=\"sha512-vnmn/Qqn6aG0POAc9mIGzjq0IybrvxJXYDafNvp9JSnDGxeF3pbkSqLvf+YGd5ku63pT7sa/jxHn7/d0mU8+tA==\" crossorigin=\"anonymous\" referrerpolicy=\"no-referrer\" defer></script> <!-- After three.js: deferred scripts run in document order. --> <script src=\"/assets/js/globe.js\" defer></script>")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 17, "<script src=\"/assets/js/app.js\" defer></script></body></html>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -207,7 +216,7 @@ func logo() templ.Component {
 			templ_7745c5c3_Var8 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 17, "<svg class=\"logo\" viewBox=\"0 0 32 32\" aria-hidden=\"true\" focusable=\"false\"><circle cx=\"16\" cy=\"16\" r=\"15\" class=\"logo__disc\"></circle> <path class=\"logo__grass\" d=\"M3 29c2-6 4-9 6-11 0 5-1 8-2 11M9 29c1-8 3-12 6-15-1 7-2 11-3 15M16 29c0-9 2-14 5-18 0 8-1 13-2 18M23 29c1-6 3-10 6-13-1 6-2 9-3 13\"></path> <ellipse cx=\"16\" cy=\"13\" rx=\"8\" ry=\"5\" class=\"logo__eye\"></ellipse> <circle cx=\"16\" cy=\"13\" r=\"2.6\" class=\"logo__pupil\"></circle></svg>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 18, "<svg class=\"logo\" viewBox=\"0 0 32 32\" aria-hidden=\"true\" focusable=\"false\"><circle cx=\"16\" cy=\"16\" r=\"15\" class=\"logo__disc\"></circle> <path class=\"logo__grass\" d=\"M3 29c2-6 4-9 6-11 0 5-1 8-2 11M9 29c1-8 3-12 6-15-1 7-2 11-3 15M16 29c0-9 2-14 5-18 0 8-1 13-2 18M23 29c1-6 3-10 6-13-1 6-2 9-3 13\"></path> <ellipse cx=\"16\" cy=\"13\" rx=\"8\" ry=\"5\" class=\"logo__eye\"></ellipse> <circle cx=\"16\" cy=\"13\" r=\"2.6\" class=\"logo__pupil\"></circle></svg>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

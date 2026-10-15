@@ -1,0 +1,160 @@
+package pages
+
+import "workshop/web/views/layout"
+
+// Globe is the whole record on one sphere, with the list of it beside.
+//
+// The order matters: the list is the page, and the globe is what the list
+// becomes where WebGL, the CDN and JavaScript all arrive. Every sighting is
+// a link in the HTML below, so the record is browsable with none of them.
+// Anything the mouse can do on the sphere, the keyboard can do through that
+// list: each placed row carries a button that turns the globe to its point
+// and opens the same card a click on the point opens.
+templ Globe(props GlobeProps) {
+	@layout.Base(layout.BaseProps{
+		Title:       "The globe",
+		Description: props.globeDescription(),
+		Globe:       true,
+	}) {
+		<section class="globe" aria-labelledby="globe-heading">
+			<!--
+				The locate mark, drawn once. Five hundred copies of it would be a
+				hundred kilobytes of the same four shapes.
+			-->
+			<svg class="globe__sprite" aria-hidden="true" focusable="false">
+				<symbol id="globe-locate-mark" viewBox="0 0 16 16">
+					<circle cx="8" cy="8" r="5.5"></circle>
+					<circle cx="8" cy="8" r="1.75" class="globe__locate-dot"></circle>
+					<path d="M8 0.5v2.5M8 13v2.5M0.5 8h2.5M13 8h2.5"></path>
+				</symbol>
+			</svg>
+			<header class="globe__head">
+				<h1 id="globe-heading" class="globe__title">The record, <em>all of it</em>, on one globe</h1>
+				<p class="globe__lede">
+					{ thousands(props.placed()) } positions, every one a real observation, coloured
+					by what kind of animal was seen. Turn the globe, or pick a sighting from the
+					list — either way you end up on its page.
+				</p>
+			</header>
+			<div class="globe__layout">
+				<div class="globe__frame">
+					<div class="globe__view">
+						<!--
+							The canvas is built in here. It is a picture of the list beside
+							it, so it stays out of the accessibility tree and takes no focus:
+							the list is the keyboard's way in, and the card is what the list
+							and a click on a point both open.
+						-->
+						<div class="globe__stage" data-globe-stage data-globe-feed="/globe/sightings.json">
+							<p class="globe__fallback" data-globe-status>
+								The globe is drawn with WebGL once this page's script runs. Every
+								sighting is listed beside it, and each one links to its own page.
+							</p>
+						</div>
+						<!--
+							One card, filled in by script and never built by it: the names in
+							it are whatever GBIF's contributors typed, so they go in as text
+							rather than as markup. The link has no href until there is a
+							sighting for it to point at, so there is nothing to tab to and
+							nowhere to go.
+						-->
+						<div class="globe__card" id="globe-card" data-globe-card hidden tabindex="-1" role="group" aria-labelledby="globe-card-name">
+							<img class="globe__card-photo" data-globe-card-photo alt="" width="112" height="112"/>
+							<div class="globe__card-body">
+								<h2 class="globe__card-name" id="globe-card-name" data-globe-card-name></h2>
+								<p class="globe__card-scientific" data-globe-card-scientific></p>
+								<p class="globe__card-meta" data-globe-card-meta></p>
+								<div class="globe__card-actions">
+									<a class="button button--primary button--small" data-globe-card-link>View record</a>
+									<button class="button button--small" type="button" data-globe-card-close>Close</button>
+								</div>
+							</div>
+						</div>
+					</div>
+					<p class="globe__hint" data-globe-hint hidden aria-hidden="true">
+						Drag to turn · scroll to zoom · click a point
+					</p>
+					<div class="globe__controls" data-globe-controls hidden>
+						<button class="button button--small" type="button" data-globe-zoom="in">Closer</button>
+						<button class="button button--small" type="button" data-globe-zoom="out">Further</button>
+						<button class="button button--small" type="button" data-globe-reset>Reset the view</button>
+					</div>
+				</div>
+				<div class="globe__side">
+					<section class="globe__legend" aria-labelledby="globe-legend-heading">
+						<h2 id="globe-legend-heading" class="panel__title">What is on it</h2>
+						if len(props.classes()) == 0 {
+							<p class="panel__hint">
+								Nothing has been ingested yet. Run <code>go run . db seed</code> and
+								reload this page.
+							</p>
+						} else {
+							<ul class="globe__classes">
+								for _, c := range props.classes() {
+									<li class="globe__class" data-class={ c.Class }>
+										<span class="globe__swatch" aria-hidden="true"></span>
+										<span class="globe__class-name">{ c.Label }</span>
+										<span class="globe__class-count mono">{ thousands(c.Count) }</span>
+									</li>
+								}
+							</ul>
+							<p class="panel__hint">
+								if props.unplaced() == 0 {
+									Every one of the { thousands(len(props.Sightings)) } sightings has a
+									position, so every one of them is a point.
+								} else {
+									{ thousands(props.placed()) } of { thousands(len(props.Sightings)) } sightings
+									have a position. The other { thousands(props.unplaced()) } are on the list
+									below, where the record says so.
+								}
+							</p>
+						}
+					</section>
+					<section class="globe__index" aria-labelledby="globe-index-heading">
+						<header class="globe__index-head">
+							<h2 id="globe-index-heading" class="panel__title">Every sighting</h2>
+							<p class="globe__index-note mono">Most recent first</p>
+						</header>
+						<!--
+							Every row is a link, and every placed row also carries the
+							keyboard's way onto the globe. The button ships hidden, because
+							with no globe there is nothing for it to turn, and the script
+							shows it only once there is. Nothing in this loop may be said
+							twice: a sentence in here is five hundred copies of itself on
+							the wire.
+						-->
+						<ol class="globe__list">
+							for _, s := range props.Sightings {
+								<li class="globe__row" data-class={ s.Species.Class }>
+									if hasPosition(s.Location) {
+										<button class="globe__locate" type="button" hidden aria-expanded="false" aria-controls="globe-card" data-globe-locate={ s.ID.String() }>
+											<span class="visually-hidden">{ "Find " + speciesName(s) + " on the globe" }</span>
+											<svg class="globe__locate-mark" aria-hidden="true" focusable="false"><use href="#globe-locate-mark"></use></svg>
+										</button>
+									}
+									<a class="globe__link" href={ "/record/" + s.ID.String() }>
+										<span class="globe__dot" aria-hidden="true"></span>
+										<span class="globe__row-name">{ speciesName(s) }</span>
+										<span class="globe__row-place">{ place(s.Location) }</span>
+										<span class="globe__row-meta mono">
+											{ dateLabel(s) }
+											<span class="globe__row-dot">·</span>
+											{ classLabel(s.Species.Class) }
+											if !hasPosition(s.Location) {
+												<span class="globe__row-dot">·</span>
+												No position recorded
+											}
+										</span>
+									</a>
+								</li>
+							}
+						</ol>
+						if len(props.Sightings) == 0 {
+							<p class="panel__hint">There is nothing to put on a globe yet.</p>
+						}
+					</section>
+				</div>
+			</div>
+		</section>
+	}
+}

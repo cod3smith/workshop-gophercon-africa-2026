@@ -30,6 +30,8 @@ func New(logger *slog.Logger, config config.Config, sightingsSvc *sighting.Servi
 	mux.Handle("GET /assets/", http.FileServerFS(assetsFs(config.IsProduction())))
 	mux.Handle("GET /{$}", handlers.Home(logger, sightingsSvc))
 	mux.Handle("GET /record/{id}", handlers.Record(logger, sightingsSvc, sounds))
+	mux.Handle("GET /globe", handlers.Globe(logger, sightingsSvc))
+	mux.Handle("GET /globe/sightings.json", handlers.GlobeFeed(logger, sightingsSvc))
 	mux.Handle("GET /play", handlers.Play(logger, gamesSvc, session, sounds))
 	mux.Handle("GET /play/new", handlers.NewGame(logger, gamesSvc, session))
 	mux.Handle("POST /play/guess", handlers.Guess(logger, gamesSvc, session, sounds))

@@ -36,6 +36,22 @@
 	--moss: #63bb7f;       /* near, good */
 	--clay: #e07944;       /* far, poor */
 
+	/* Taxonomy. One colour per class, for the globe's points, the swatch in
+	   its legend and the dot on each row of its list. Six hues at one
+	   lightness - 7.4:1 to 8.7:1 on --ink, the same band as --gold and
+	   --moss - so no class shouts over another, and not one of them is
+	   --gold: a dot you cannot click must not wear the colour that means
+	   you can. Mammals are three quarters of the record, so they take the
+	   quiet warm grey and the rare classes are what stands out. None of
+	   these says anything on its own: every point has its named row beside
+	   it, and the legend names every colour. */
+	--class-mammals: #b5ada0;
+	--class-birds: #6fb8e0;
+	--class-crocodiles: #7fbf63;
+	--class-turtles: #3fb3a3;
+	--class-sharks: #a79ad9;
+	--class-lizards: #dd8fae;
+
 	--display: "EB Garamond", Georgia, "Times New Roman", serif;
 	--sans: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
 	--mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
@@ -278,6 +294,13 @@ a:hover {
 .button--large {
 	padding: 0.95rem 1.9rem;
 	font-size: 1.05rem;
+}
+
+/* For controls that sit on top of something they are steering, like the
+   globe's. Still 2.25rem tall, so a finger can land on one. */
+.button--small {
+	padding: 0.45rem 0.85rem;
+	font-size: 0.82rem;
 }
 
 .button:disabled {
@@ -1478,6 +1501,474 @@ a:hover {
 
 .map--record {
 	cursor: grab;
+}
+
+/* --- The globe ---------------------------------------------------------- */
+
+.globe {
+	padding: clamp(2rem, 6vw, 3.5rem) 0 4rem;
+}
+
+.globe__head {
+	max-width: 48rem;
+	margin-bottom: 2rem;
+}
+
+.globe__title {
+	margin: 0;
+	font-family: var(--display);
+	font-size: clamp(1.8rem, 4.5vw, 2.8rem);
+	font-weight: 500;
+	line-height: 1.1;
+	letter-spacing: 0.01em;
+}
+
+.globe__title em {
+	color: var(--moss);
+	font-style: italic;
+}
+
+.globe__lede {
+	margin: 0.9rem 0 0;
+	max-width: 42rem;
+	color: var(--paper-dim);
+	font-size: 1.02rem;
+}
+
+.globe__layout {
+	display: grid;
+	grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+	gap: 2rem;
+	align-items: start;
+}
+
+/* The sphere stays put while the list beside it is scrolled, because the
+   two are meant to be read against each other. */
+.globe__frame {
+	position: sticky;
+	top: 1.5rem;
+	display: grid;
+	gap: 0.75rem;
+}
+
+/* The globe and the card that names one of its points: the card is laid
+   over the globe, and over nothing else, so the controls under it stay
+   where they are and stay clickable. */
+.globe__view {
+	position: relative;
+}
+
+.globe__stage {
+	position: relative;
+	/* Before the script, and wherever the globe cannot be drawn, this box
+	   holds one sentence and is sized for one. globe.js gives it a
+	   sphere's worth of the page only once it is going to draw one. */
+	min-height: 11rem;
+	overflow: hidden;
+	border: 1px solid var(--line);
+	border-radius: var(--radius);
+	/* The canvas is drawn with alpha, so this is the sky behind the globe:
+	   a little light from where the sun is in the scene, and nothing else. */
+	background:
+		radial-gradient(42rem 32rem at 28% 14%, rgb(99 187 127 / 8%), transparent 62%),
+		radial-gradient(34rem 28rem at 84% 86%, rgb(111 184 224 / 7%), transparent 60%),
+		var(--ink);
+}
+
+.globe__stage.is-drawing {
+	min-height: 0;
+	aspect-ratio: 1 / 1;
+	max-height: 68vh;
+}
+
+.globe__stage canvas {
+	display: block;
+	width: 100%;
+	height: 100%;
+	/* A finger drawn across the globe turns it; a finger drawn up the page
+	   still scrolls the page, because a square of a phone screen that
+	   swallows scrolling is a trap. */
+	touch-action: pan-y;
+}
+
+/* Only once there is a sphere to turn: the cursor must not promise a drag
+   on a box that is going to stay a paragraph. */
+.globe__stage.is-live {
+	cursor: grab;
+}
+
+.globe__stage.is-turning {
+	cursor: grabbing;
+}
+
+/* The paragraph the stage ships with, and the only thing that speaks for
+   it: before the script, while it is drawing, and if it cannot. It sits
+   over the canvas rather than instead of it, so a globe that drew but
+   found no sightings is still a globe with an explanation on it. */
+.globe__fallback {
+	position: absolute;
+	inset: 0;
+	display: grid;
+	place-items: center;
+	margin: 0;
+	padding: 2rem;
+	background: rgb(13 17 15 / 74%);
+	color: var(--paper-dim);
+	font-size: 0.95rem;
+	text-align: center;
+}
+
+.globe__hint {
+	margin: 0;
+	color: var(--paper-dim);
+	font-family: var(--mono);
+	font-size: 0.72rem;
+	letter-spacing: 0.1em;
+	text-transform: uppercase;
+}
+
+.globe__controls {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5rem;
+}
+
+/* One sighting, named: what a click on a point opens, and what the list's
+   locate button opens too. It takes focus when the keyboard asked for it,
+   so the outline is on :focus and not only :focus-visible. */
+.globe__card {
+	position: absolute;
+	z-index: 2;
+	right: 0.75rem;
+	bottom: 0.75rem;
+	left: 0.75rem;
+	display: grid;
+	grid-template-columns: auto minmax(0, 1fr);
+	gap: 0.9rem;
+	padding: 0.8rem;
+	border: 1px solid var(--edge);
+	border-radius: var(--radius);
+	background: rgb(13 17 15 / 94%);
+	box-shadow: 0 14px 34px rgb(0 0 0 / 45%);
+}
+
+.globe__card:focus {
+	outline: 2px solid var(--gold);
+	outline-offset: 2px;
+}
+
+.globe__card-photo {
+	width: 5.25rem;
+	height: 5.25rem;
+	border-radius: var(--radius);
+	background: var(--sunken);
+	object-fit: cover;
+}
+
+.globe__card-body {
+	display: grid;
+	gap: 0.3rem;
+	align-content: start;
+}
+
+.globe__card-name {
+	margin: 0;
+	font-family: var(--display);
+	font-size: 1.25rem;
+	font-weight: 600;
+	line-height: 1.15;
+}
+
+.globe__card-scientific {
+	margin: 0;
+	color: var(--paper-dim);
+	font-size: 0.82rem;
+	font-style: italic;
+}
+
+.globe__card-meta {
+	margin: 0;
+	color: var(--paper-dim);
+	font-family: var(--mono);
+	font-size: 0.74rem;
+}
+
+.globe__card-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5rem;
+	margin-top: 0.4rem;
+}
+
+.globe__side {
+	display: grid;
+	gap: 1.25rem;
+	min-width: 0;
+}
+
+.globe__legend {
+	display: grid;
+	gap: 0.9rem;
+	padding: 1.2rem;
+	border: 1px solid var(--line);
+	border-radius: var(--radius);
+	background: var(--surface);
+}
+
+.globe__classes {
+	display: grid;
+	gap: 0.15rem;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.globe__class {
+	display: grid;
+	grid-template-columns: auto minmax(0, 1fr) auto;
+	gap: 0.7rem;
+	align-items: center;
+	padding: 0.3rem 0.1rem;
+}
+
+.globe__swatch {
+	width: 0.7rem;
+	height: 0.7rem;
+	border-radius: 50%;
+	background: var(--swatch);
+	box-shadow: 0 0 0 3px rgb(13 17 15 / 55%);
+}
+
+.globe__class-name {
+	font-size: 0.92rem;
+}
+
+.globe__class-count {
+	color: var(--paper-dim);
+	font-size: 0.85rem;
+}
+
+.globe__index {
+	overflow: hidden;
+	border: 1px solid var(--line);
+	border-radius: var(--radius);
+	background: var(--surface);
+}
+
+.globe__index-head {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.3rem 1rem;
+	align-items: baseline;
+	justify-content: space-between;
+	padding: 0.9rem 1rem;
+	border-bottom: 1px solid var(--line);
+	background: var(--sunken);
+}
+
+.globe__index-note {
+	margin: 0;
+	color: var(--paper-dim);
+	font-size: 0.7rem;
+	letter-spacing: 0.1em;
+	text-transform: uppercase;
+}
+
+.globe__list {
+	max-height: min(34rem, 62vh);
+	overflow-y: auto;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+	overscroll-behavior: contain;
+}
+
+/* Nothing is in the first column until the script puts the locate buttons
+   there, so a page without one does not carry an empty gutter. */
+.globe__row {
+	display: grid;
+	grid-template-columns: 0 minmax(0, 1fr);
+	align-items: center;
+	border-top: 1px solid var(--line);
+}
+
+.globe__side.is-live .globe__row {
+	grid-template-columns: 2.5rem minmax(0, 1fr);
+}
+
+.globe__row:first-child {
+	border-top: 0;
+}
+
+/* The row whose point is lit, marked in its own class's colour so the two
+   read as the same thing in two places. */
+.globe__row.is-selected {
+	background: var(--sunken);
+	box-shadow: inset 3px 0 0 var(--swatch);
+}
+
+.globe__locate {
+	grid-column: 1;
+	display: grid;
+	place-items: center;
+	width: 2rem;
+	height: 2rem;
+	margin-left: 0.4rem;
+	padding: 0;
+	border: 1px solid transparent;
+	border-radius: var(--radius);
+	background: none;
+	color: var(--paper-dim);
+	cursor: pointer;
+	transition: color 160ms ease, border-color 160ms ease;
+}
+
+.globe__locate:hover,
+.globe__locate[aria-expanded="true"] {
+	border-color: var(--gold);
+	color: var(--gold);
+}
+
+/* The locate mark is defined once at the top of the page and used five
+   hundred times. It is out of flow and out of the way, not display:none,
+   because a symbol has to be in a rendered tree to be referenced. */
+.globe__sprite {
+	position: absolute;
+	width: 0;
+	height: 0;
+	overflow: hidden;
+}
+
+.globe__locate-mark {
+	width: 1rem;
+	height: 1rem;
+	fill: none;
+	stroke: currentcolor;
+	stroke-width: 1.3;
+	stroke-linecap: round;
+}
+
+.globe__locate-dot {
+	fill: currentcolor;
+	stroke: none;
+}
+
+.globe__link {
+	grid-column: 2;
+	display: grid;
+	grid-template-columns: 0.6rem minmax(0, 1fr);
+	gap: 0.1rem 0.6rem;
+	padding: 0.6rem 0.9rem 0.65rem 0.5rem;
+	color: var(--paper);
+	text-decoration: none;
+}
+
+.globe__link:hover {
+	background: rgb(51 59 55 / 55%);
+}
+
+.globe__dot {
+	grid-row: 1 / span 3;
+	width: 0.6rem;
+	height: 0.6rem;
+	margin-top: 0.42rem;
+	border-radius: 50%;
+	background: var(--swatch);
+}
+
+.globe__row-name {
+	font-family: var(--display);
+	font-size: 1.05rem;
+	font-weight: 600;
+	line-height: 1.2;
+}
+
+.globe__link:hover .globe__row-name {
+	color: var(--gold-soft);
+	text-decoration: underline;
+	text-underline-offset: 0.2em;
+}
+
+.globe__row-place {
+	color: var(--paper-dim);
+	font-size: 0.82rem;
+}
+
+.globe__row-meta {
+	color: var(--paper-dim);
+	font-size: 0.7rem;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+}
+
+.globe__row-dot {
+	padding: 0 0.15rem;
+	opacity: 0.5;
+}
+
+/* The six classes the record holds, keyed by the Latin the data carries,
+   so the swatch, the row's dot and the point on the globe are one colour
+   named in one place. A class this block has never met falls back to the
+   dim text colour rather than to nothing. */
+.globe [data-class] {
+	--swatch: var(--paper-dim);
+}
+
+.globe [data-class="Mammalia"] {
+	--swatch: var(--class-mammals);
+}
+
+.globe [data-class="Aves"] {
+	--swatch: var(--class-birds);
+}
+
+.globe [data-class="Crocodylia"] {
+	--swatch: var(--class-crocodiles);
+}
+
+.globe [data-class="Testudines"] {
+	--swatch: var(--class-turtles);
+}
+
+.globe [data-class="Elasmobranchii"] {
+	--swatch: var(--class-sharks);
+}
+
+.globe [data-class="Squamata"] {
+	--swatch: var(--class-lizards);
+}
+
+@media (max-width: 64rem) {
+	.globe__layout {
+		grid-template-columns: minmax(0, 1fr);
+		gap: 1.5rem;
+	}
+
+	/* Stacked, the sphere has the list under it rather than beside it, so
+	   there is nothing left for it to stay level with. */
+	.globe__frame {
+		position: static;
+	}
+
+	.globe__stage.is-drawing {
+		max-height: 60vh;
+		max-height: 60svh;
+	}
+
+	.globe__list {
+		max-height: 28rem;
+	}
+}
+
+@media (max-width: 34rem) {
+	.globe__card {
+		grid-template-columns: minmax(0, 1fr);
+	}
+
+	.globe__card-photo {
+		width: 100%;
+		height: 6rem;
+	}
 }
 
 /* --- Footer ------------------------------------------------------------- */
