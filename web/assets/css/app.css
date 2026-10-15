@@ -668,6 +668,57 @@ a:hover {
 	cursor: default;
 }
 
+.mapframe {
+	position: relative;
+}
+
+/* Contains Leaflet's panes, so the crosshair can sit over the map without
+   bidding against their z-indexes.
+
+   The width is pinned because the map is no longer a flex item that
+   stretching would size: on its own, min-height drives the height and
+   aspect-ratio then derives a width wider than the screen. */
+.map {
+	width: 100%;
+	isolation: isolate;
+}
+
+/* The target the keyboard and the button aim at: the arrow keys pan the
+   map underneath it rather than moving a cursor across it. */
+.crosshair {
+	position: absolute;
+	inset: 0;
+	z-index: 1;
+	display: grid;
+	place-items: center;
+	pointer-events: none;
+}
+
+.crosshair svg {
+	width: 3.25rem;
+	height: 3.25rem;
+	overflow: visible;
+	filter: drop-shadow(0 1px 3px rgb(0 0 0 / 70%));
+}
+
+.crosshair__arm {
+	fill: none;
+	stroke: var(--paper);
+	stroke-width: 2;
+	stroke-linecap: round;
+	opacity: 0.8;
+}
+
+.crosshair__ring {
+	fill: none;
+	stroke: var(--gold);
+	stroke-width: 2;
+}
+
+.crosshair__dot {
+	fill: var(--gold);
+}
+
 .map__fallback {
 	display: grid;
 	place-items: center;

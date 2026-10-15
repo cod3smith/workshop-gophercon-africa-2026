@@ -175,3 +175,56 @@ func TestPhoto(t *testing.T) {
 		assert.False(t, ok)
 	})
 }
+
+func TestService_Played(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("Returns every sighting the game asked about", func(t *testing.T) {
+		sightings := pool(50)
+		svc := game.NewService(sourceStub{sightings: sightings})
+
+		g, err := svc.New(ctx)
+		require.NoError(t, err)
+
+		played, err := svc.Played(ctx, g)
+		require.NoError(t, err)
+		assert.Len(t, played, game.Rounds)
+
+		for _, id := range g.SightingIDs {
+			assert.Equal(t, id, played[id].ID)
+		}
+	})
+
+	t.Run("A sighting that has gone leaves the others on their own round", func(t *testing.T) {
+		sightings := pool(50)
+		svc := game.NewService(sourceStub{sightings: sightings})
+
+		g, err := svc.New(ctx)
+		require.NoError(t, err)
+
+		// Drop the sighting the second round asks about, as a reseeded
+		// database would.
+		missing := g.SightingIDs[1]
+		remaining := make([]sighting.Sighting, 0, len(sightings)-1)
+		for _, s := range sightings {
+			if s.ID != missing {
+				remaining = append(remaining, s)
+			}
+		}
+
+		played, err := game.NewService(sourceStub{sightings: remaining}).Played(ctx, g)
+		require.NoError(t, err)
+
+		_, found := played[missing]
+		assert.False(t, found, "the missing sighting should be absent")
+
+		// Every other round still resolves to the sighting it was drawn
+		// against, rather than shifting up into the gap.
+		for i, id := range g.SightingIDs {
+			if i == 1 {
+				continue
+			}
+			assert.Equal(t, id, played[id].ID, "round %d moved onto another sighting", i+1)
+		}
+	})
+}

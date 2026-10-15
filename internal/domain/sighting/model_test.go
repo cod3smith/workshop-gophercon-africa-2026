@@ -1,6 +1,7 @@
 package sighting
 
 import (
+	"math"
 	"testing"
 	"time"
 	"uuid"
@@ -144,6 +145,13 @@ func TestParseCoordinates(t *testing.T) {
 		"Longitude too high": {longitude: 180.1, wantErr: true},
 		"Longitude too low":  {longitude: -180.1, wantErr: true},
 		"Both out of range":  {latitude: 100, longitude: 200, wantErr: true},
+		// NaN compares false against every bound, so it reaches the range
+		// checks and passes them unless it is named.
+		"Latitude not a number":  {latitude: math.NaN(), longitude: 0, wantErr: true},
+		"Longitude not a number": {latitude: 0, longitude: math.NaN(), wantErr: true},
+		"Neither is a number":    {latitude: math.NaN(), longitude: math.NaN(), wantErr: true},
+		"Infinite latitude":      {latitude: math.Inf(1), wantErr: true},
+		"Infinite longitude":     {longitude: math.Inf(-1), wantErr: true},
 	}
 
 	for name, test := range tt {

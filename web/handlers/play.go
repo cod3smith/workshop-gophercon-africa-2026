@@ -2,9 +2,11 @@ package handlers
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"net/http"
 	"strconv"
+	"uuid"
 	"workshop/internal/domain/game"
 	"workshop/internal/domain/sighting"
 	"workshop/web/views/pages"
@@ -14,7 +16,7 @@ import (
 type GameService interface {
 	New(ctx context.Context) (game.Game, error)
 	Round(ctx context.Context, g game.Game) (sighting.Sighting, error)
-	Played(ctx context.Context, g game.Game) ([]sighting.Sighting, error)
+	Played(ctx context.Context, g game.Game) (map[uuid.UUID]sighting.Sighting, error)
 }
 
 // Play renders the round the player is on, and starts them a game when
@@ -26,8 +28,7 @@ func Play(logger *slog.Logger, games GameService, session Session) http.HandlerF
 		g, err := session.Read(r)
 		if err != nil {
 			if g, err = start(ctx, w, games, session); err != nil {
-				logger.ErrorContext(ctx, "handlers: starting a game: "+err.Error())
-				renderError(ctx, w, logger, http.StatusInternalServerError, "Unable to start a game.")
+				startFailed(ctx, w, logger, err)
 				return
 			}
 		}
@@ -37,6 +38,8 @@ func Play(logger *slog.Logger, games GameService, session Session) http.HandlerF
 			// the first time they can be shown together.
 			played, err := games.Played(ctx, g)
 			if err != nil {
+				// The score and the distances are all in the cookie, so the
+				// screen is still worth showing without the animals' names.
 				logger.ErrorContext(ctx, "handlers: reading the finished game: "+err.Error())
 				played = nil
 			}
@@ -46,12 +49,18 @@ func Play(logger *slog.Logger, games GameService, session Session) http.HandlerF
 		}
 
 		sight, err := games.Round(ctx, g)
-		if err != nil {
-			// The sighting a round asks about has gone, which a reseeded
+		if errors.Is(err, sighting.ErrNotFound) {
+			// The sighting this round asks about has gone, which a reseeded
 			// database does, so the player gets a new game rather than an
 			// error page about a row they never knew existed.
-			logger.WarnContext(ctx, "handlers: reading the round, starting again: "+err.Error())
+			logger.WarnContext(ctx, "handlers: the round's sighting has gone, starting again")
 			http.Redirect(w, r, "/play/new", http.StatusSeeOther)
+			return
+		} else if err != nil {
+			// Anything else is the store being unwell, and throwing the
+			// player's game away would be the wrong way to say so.
+			logger.ErrorContext(ctx, "handlers: reading the round: "+err.Error())
+			renderError(ctx, w, logger, http.StatusInternalServerError, "Unable to load this round.")
 			return
 		}
 
@@ -65,8 +74,7 @@ func NewGame(logger *slog.Logger, games GameService, session Session) http.Handl
 		ctx := r.Context()
 
 		if _, err := start(ctx, w, games, session); err != nil {
-			logger.ErrorContext(ctx, "handlers: starting a game: "+err.Error())
-			renderError(ctx, w, logger, http.StatusInternalServerError, "Unable to start a game.")
+			startFailed(ctx, w, logger, err)
 			return
 		}
 
@@ -105,9 +113,13 @@ func Guess(logger *slog.Logger, games GameService, session Session) http.Handler
 		}
 
 		sight, err := games.Round(ctx, g)
-		if err != nil {
-			logger.WarnContext(ctx, "handlers: reading the round, starting again: "+err.Error())
+		if errors.Is(err, sighting.ErrNotFound) {
+			logger.WarnContext(ctx, "handlers: the round's sighting has gone, starting again")
 			http.Redirect(w, r, "/play/new", http.StatusSeeOther)
+			return
+		} else if err != nil {
+			logger.ErrorContext(ctx, "handlers: reading the round: "+err.Error())
+			renderError(ctx, w, logger, http.StatusInternalServerError, "Unable to score this round.")
 			return
 		}
 
@@ -127,6 +139,20 @@ func Guess(logger *slog.Logger, games GameService, session Session) http.Handler
 			Result:   result,
 		}))
 	}
+}
+
+// startFailed explains why a game couldn't begin. An empty database is the
+// likely cause on a fresh clone, and it has a fix the player can run.
+func startFailed(ctx context.Context, w http.ResponseWriter, logger *slog.Logger, err error) {
+	if errors.Is(err, game.ErrNotEnoughSightings) {
+		logger.WarnContext(ctx, "handlers: no sightings to play with")
+		renderError(ctx, w, logger, http.StatusServiceUnavailable,
+			"There are no sightings to play with yet. Run 'go run . db seed' and reload this page.")
+		return
+	}
+
+	logger.ErrorContext(ctx, "handlers: starting a game: "+err.Error())
+	renderError(ctx, w, logger, http.StatusInternalServerError, "Unable to start a game.")
 }
 
 // start draws a new game and puts it on the response.

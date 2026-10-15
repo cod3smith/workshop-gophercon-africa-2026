@@ -2,6 +2,7 @@ package sighting
 
 import (
 	"fmt"
+	"math"
 	"time"
 	"uuid"
 	"workshop/internal/domain/sighting/country"
@@ -105,6 +106,11 @@ func (s Sighting) CreateParams() CreateParams {
 // range are an error rather than a point nobody can plot, so every
 // Coordinates that exists is one the rest of the application can trust.
 func ParseCoordinates(latitude, longitude float64) (Coordinates, error) {
+	// Every comparison against NaN is false, so the range checks below let
+	// it through. A position that is not a number is not a position.
+	if math.IsNaN(latitude) || math.IsNaN(longitude) {
+		return Coordinates{}, fmt.Errorf("%w: latitude and longitude must be numbers, got %v and %v", ErrInvalid, latitude, longitude)
+	}
 	if latitude < -90 || latitude > 90 {
 		return Coordinates{}, fmt.Errorf("%w: latitude must be between -90 and 90, got %v", ErrInvalid, latitude)
 	}

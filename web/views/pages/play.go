@@ -5,6 +5,7 @@ import (
 	"math"
 	"strconv"
 	"unicode"
+	"uuid"
 	"workshop/internal/domain/game"
 	"workshop/internal/domain/sighting"
 	"workshop/web/views/components"
@@ -27,8 +28,10 @@ type (
 	// OverProps is a finished game, with the sightings it asked about so
 	// each round can be named.
 	OverProps struct {
-		Game      game.Game
-		Sightings []sighting.Sighting
+		Game game.Game
+		// Sightings is keyed by sighting id, so a round names the animal it
+		// was actually drawn against rather than whatever is at its index.
+		Sightings map[uuid.UUID]sighting.Sighting
 	}
 )
 
@@ -124,26 +127,41 @@ func condition(s sighting.Sighting) string {
 	return s.Weather.Condition.Description
 }
 
+// played returns the sighting round i asked about, and false when it is no
+// longer there to name.
+func (p OverProps) played(i int) (sighting.Sighting, bool) {
+	if i < 0 || i >= len(p.Game.SightingIDs) {
+		return sighting.Sighting{}, false
+	}
+
+	s, ok := p.Sightings[p.Game.SightingIDs[i]]
+	return s, ok
+}
+
 // playedName names the animal in round i, or an empty string when that
 // sighting is no longer there to name.
 func (p OverProps) playedName(i int) string {
-	if i < 0 || i >= len(p.Sightings) {
+	s, ok := p.played(i)
+	if !ok {
 		return ""
 	}
-	return speciesName(p.Sightings[i])
+	return speciesName(s)
 }
 
 // playedPlace is where round i's animal really was.
 func (p OverProps) playedPlace(i int) string {
-	if i < 0 || i >= len(p.Sightings) {
+	s, ok := p.played(i)
+	if !ok {
 		return ""
 	}
-	return place(p.Sightings[i].Location)
+	return place(s.Location)
 }
 
-// roundLabel says where in the game the player is.
-func roundLabel(g game.Game) string {
-	return fmt.Sprintf("Round %d of %d", min(g.Round+1, game.Rounds), game.Rounds)
+// roundLabel names the round being shown. The caller says which, because
+// the answer page is headed by the round just played while the question
+// page is headed by the one being asked.
+func roundLabel(n int) string {
+	return fmt.Sprintf("Round %d of %d", min(max(n, 1), game.Rounds), game.Rounds)
 }
 
 // distanceLabel is how far out a guess was, in units that stay readable

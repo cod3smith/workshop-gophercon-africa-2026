@@ -40,7 +40,10 @@ Some decisions worth the thirty seconds:
 
 - **The game is in a cookie, signed.** `web/handlers/session.go` stores the game as JSON with
   an HMAC beside it, so the server keeps no per-player state and a score edited in devtools
-  fails the signature and starts a new game.
+  fails the signature and starts a new game. Signed is not replay-proof: someone who saves a
+  cookie before guessing can restore it afterwards and re-answer a round they have already
+  seen. Closing that needs server-side state, which for a five-round game costs more than the
+  cheat is worth, so it is a trade rather than an oversight.
 - **Points decay smoothly** rather than in bands, so there is always something to gain by
   guessing a little better. A pin on top of the answer is 5,000; 1,500km out is about 1,839.
 - **A resubmitted form can't score twice.** Each round carries its number, and a guess for a

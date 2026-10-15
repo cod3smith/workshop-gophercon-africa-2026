@@ -10,12 +10,12 @@ import (
 // earth they think the animal was.
 templ Question(props QuestionProps) {
 	@layout.Base(layout.BaseProps{
-		Title:       roundLabel(props.Game),
+		Title:       roundLabel(props.Game.Round + 1),
 		Description: "Look at the animal. Guess where on earth it was seen. Five rounds, 25,000 points.",
 		Map:         true,
 		Class:       "is-playing",
 	}) {
-		@scoreboard(props.Game)
+		@scoreboard(props.Game, props.Game.Round+1)
 		<form class="round" method="post" action="/play/guess">
 			<input type="hidden" name="round" value={ strconv.Itoa(props.Game.Round) }/>
 			<input type="hidden" name="lat" id="lat" value=""/>
@@ -38,20 +38,41 @@ templ Question(props QuestionProps) {
 						</div>
 					}
 				</dl>
-				<p class="panel__hint">
-					Click the map below to drop a pin where you think it was
-					recorded. The closer you are, the more it scores.
+				<p class="panel__hint" id="map-help">
+					Click the map to drop a pin where you think it was recorded. Or
+					focus the map, pan with the arrow keys, and press Enter to place
+					one at the crosshair. The closer you are, the more it scores.
 				</p>
 			</section>
 			<section class="guess" aria-label="Your guess">
-				<div class="map" data-safari-map="safari-map" role="application" aria-label="Click to place your guess">
-					<p class="map__fallback">
-						The map needs JavaScript and a connection. Without it you can
-						still read every sighting on <a href="/">the record</a>.
-					</p>
+				<div class="mapframe">
+					<div
+						class="map"
+						data-safari-map="safari-map"
+						role="group"
+						aria-label="Map to place your guess on"
+						aria-describedby="map-help"
+					>
+						<p class="map__fallback">
+							The map needs JavaScript and a connection. Without it you can
+							still read every sighting on <a href="/">the record</a>.
+						</p>
+					</div>
+					<!-- Revealed by safari.js: it only means anything once the map is live. -->
+					<div class="crosshair" data-crosshair hidden aria-hidden="true">
+						<svg viewBox="0 0 48 48" focusable="false">
+							<path class="crosshair__arm" d="M24 4v12M24 32v12M4 24h12M32 24h12"></path>
+							<circle class="crosshair__ring" cx="24" cy="24" r="9"></circle>
+							<circle class="crosshair__dot" cx="24" cy="24" r="1.5"></circle>
+						</svg>
+					</div>
 				</div>
 				<div class="guess__bar">
 					<output class="field__readout" id="guess-readout" for="lat lng">No pin dropped yet</output>
+					<!-- type="button": this sits inside the guess form and must not submit it. -->
+					<button class="button" type="button" data-drop-centre hidden>
+						Place pin at crosshair
+					</button>
 					<button class="button button--primary button--large" type="submit" id="guess-submit" disabled>
 						Lock it in
 					</button>
@@ -71,7 +92,7 @@ templ Answer(props AnswerProps) {
 		Map:         true,
 		Class:       "is-playing",
 	}) {
-		@scoreboard(props.Game)
+		@scoreboard(props.Game, len(props.Game.Results))
 		<section class="result">
 			<header class="result__head">
 				<p class="result__verdict">{ verdict(props.Result.DistanceKm) }</p>
@@ -183,9 +204,9 @@ templ Over(props OverProps) {
 
 // scoreboard is the strip above a round: where the player is, and what
 // they have banked so far.
-templ scoreboard(g game.Game) {
+templ scoreboard(g game.Game, round int) {
 	<div class="scoreboard">
-		<p class="scoreboard__round">{ roundLabel(g) }</p>
+		<p class="scoreboard__round">{ roundLabel(round) }</p>
 		<ol class="pips" aria-label="Rounds played">
 			for i := range game.Rounds {
 				if i < len(g.Results) {

@@ -35,10 +35,12 @@ const (
 // distance between two guesses is measured on.
 const earthRadiusKm = 6371.0088
 
-// halfLifeKm is how quickly the points fall away from the answer. A guess
-// this far out keeps about a third of the round's points, which is gentle
-// enough that a player who knows the continent still scores.
-const halfLifeKm = 1500
+// decayKm is how quickly the points fall away from the answer: the
+// distance at which a guess keeps about a third of the round's points,
+// which is gentle enough that a player who knows the continent still
+// scores. It is the curve's e-folding distance, not its half-life, which
+// falls around 1,040km.
+const decayKm = 1500
 
 // Result is one round, once the player has guessed: how far out they were
 // and what it earned them.
@@ -111,7 +113,7 @@ func ScoreFor(distanceKm float64) int {
 		return MaxRoundScore
 	}
 
-	points := int(math.Round(MaxRoundScore * math.Exp(-distanceKm/halfLifeKm)))
+	points := int(math.Round(MaxRoundScore * math.Exp(-distanceKm/decayKm)))
 	return min(max(points, 0), MaxRoundScore)
 }
 

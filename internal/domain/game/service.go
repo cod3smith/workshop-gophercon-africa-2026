@@ -74,11 +74,15 @@ func (s Service) Round(ctx context.Context, g Game) (sighting.Sighting, error) {
 	return s.source.Find(ctx, id)
 }
 
-// Played returns the sightings the game asked about, in the order they
-// were asked, so a finished game can be shown back round by round. A
-// sighting that has since gone is left out rather than failing the lot.
-func (s Service) Played(ctx context.Context, g Game) ([]sighting.Sighting, error) {
-	out := make([]sighting.Sighting, 0, len(g.SightingIDs))
+// Played returns the sightings the game asked about, keyed by their ID, so
+// a finished game can name each round.
+//
+// It is a map rather than a slice because the rounds are looked up by the
+// id they were drawn against: a sighting that has since gone is simply
+// absent, where a shorter slice would silently shift every later round
+// onto the wrong animal.
+func (s Service) Played(ctx context.Context, g Game) (map[uuid.UUID]sighting.Sighting, error) {
+	out := make(map[uuid.UUID]sighting.Sighting, len(g.SightingIDs))
 	for _, id := range g.SightingIDs {
 		sight, err := s.source.Find(ctx, id)
 		if errors.Is(err, sighting.ErrNotFound) {
@@ -87,7 +91,7 @@ func (s Service) Played(ctx context.Context, g Game) ([]sighting.Sighting, error
 			return nil, err
 		}
 
-		out = append(out, sight)
+		out[id] = sight
 	}
 
 	return out, nil
