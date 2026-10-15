@@ -430,3 +430,33 @@ func TestOver_MapsARoundWhoseGuessWasNotKept(t *testing.T) {
 	assert.Equal(t, game.Rounds, strings.Count(data[1], `"answer"`))
 	assert.Equal(t, game.Rounds-1, strings.Count(data[1], `"guess"`), "a missing guess is left off, not drawn at 0,0")
 }
+
+// A medal and a tone are two ways of saying how a round went, one in the
+// pasted share text and one in the page's colour. They are separate
+// switches, so this is what keeps them from drifting into disagreement.
+func TestMedalAndToneAgree(t *testing.T) {
+	t.Parallel()
+
+	want := map[string]string{
+		"🟩": "is-near",
+		"🟨": "is-mid",
+		"🟧": "is-far",
+		"⬛": "is-far",
+	}
+
+	for points := 0; points <= game.MaxRoundScore; points += 50 {
+		assert.Equal(t, want[game.Medal(points)], pages.ToneFor(points), "%d points", points)
+	}
+}
+
+func TestOver_DrawsTheMedalsRatherThanEmojiTheyCanVanishAs(t *testing.T) {
+	t.Parallel()
+
+	g, played := finished([]float64{7.2, 900, 3000, 6000, 9000})
+	html := renderOver(t, pages.OverProps{Game: g, Sightings: played})
+
+	assert.Equal(t, game.Rounds, strings.Count(html, `class="medal"`), "one drawn square per round")
+	for _, emoji := range []string{"🟩", "🟨", "🟧", "⬛"} {
+		assert.NotContains(t, html[:strings.Index(html, `id="share-text"`)], emoji, "the rounds list is drawn, not typed")
+	}
+}

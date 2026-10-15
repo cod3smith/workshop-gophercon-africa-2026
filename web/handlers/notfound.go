@@ -11,6 +11,6 @@ import (
 // "404 page not found".
 func NotFound(logger *slog.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		renderError(r.Context(), w, logger, http.StatusNotFound, "There's nothing recorded at that address.")
+		renderError(r.Context(), w, logger, http.StatusNotFound, "That address isn't part of the record. Browse the sightings, or play a round.")
 	}
 }

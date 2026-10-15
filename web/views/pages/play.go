@@ -136,7 +136,7 @@ func (p OverProps) bestLine() string {
 // distance it states.
 func (p OverProps) bestTone() string {
 	result, _, _ := p.Game.Best()
-	return tone(result.Points)
+	return ToneFor(result.Points)
 }
 
 // photo is the image a round is played on.
@@ -318,14 +318,15 @@ func distanceLabel(km float64) string {
 	}
 }
 
-// tone names how a round went, so the colour the page uses agrees with
+// ToneFor names how a round went, so the colour the page uses agrees with
 // the distance and the medal already stating it rather than being the only
-// thing that says so.
-func tone(points int) string {
+// thing that says so. Its bands are the medal's: near is the green square,
+// mid the yellow, far the orange and the black.
+func ToneFor(points int) string {
 	switch {
 	case points >= 4000:
 		return "is-near"
-	case points >= 1500:
+	case points >= 2500:
 		return "is-mid"
 	default:
 		return "is-far"
@@ -335,7 +336,7 @@ func tone(points int) string {
 // gameTone is the same judgement over a whole game, by what an average
 // round of it was worth.
 func gameTone(g game.Game) string {
-	return tone(g.Total() * game.MaxRoundScore / game.MaxScore)
+	return ToneFor(g.Total() * game.MaxRoundScore / game.MaxScore)
 }
 
 // verdict is a word for how good a guess was, so the number means

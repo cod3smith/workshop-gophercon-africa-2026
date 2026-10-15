@@ -8,8 +8,7 @@ import (
 templ Error(message string, code int) {
 	@layout.Base(layout.BaseProps{
 		Title:       strconv.Itoa(code),
-		Description: "Something went wrong.",
-		Class:       "is-error",
+		Description: message,
 	}) {
 		<section class="oops">
 			<p class="oops__code mono">{ strconv.Itoa(code) }</p>

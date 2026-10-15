@@ -512,21 +512,21 @@ a:hover {
 	list-style: none;
 }
 
+/* A round still to play is an empty outline; a round played is that same
+   square filled with how it went. Hollow against solid is a difference of
+   kind, which holds up where a one-step difference in grey does not. */
 .pip {
-	display: grid;
-	place-items: center;
 	width: 1.6rem;
 	height: 1.6rem;
-	border: 1px solid var(--edge);
+	border: 1px dashed var(--edge);
 	border-radius: var(--radius);
-	background: var(--surface);
-	font-size: 0.8rem;
-	line-height: 1;
+	background: transparent;
 }
 
 .pip--done {
-	border-color: var(--sunken);
-	background: var(--raised);
+	border-style: solid;
+	border-color: var(--tone, var(--paper));
+	background: var(--tone, var(--paper));
 }
 
 .scoreboard__score {
@@ -1102,8 +1102,14 @@ a:hover {
 	font-size: 0.8rem;
 }
 
-.rounds__medal {
-	font-size: 0.9rem;
+/* Drawn rather than typed as an emoji: those carry their own black, which
+   is the colour of the row behind them exactly when a round went badly. */
+.medal {
+	display: block;
+	width: 0.9rem;
+	height: 0.9rem;
+	border-radius: var(--radius);
+	background: var(--tone, var(--paper-dim));
 }
 
 .rounds__what {

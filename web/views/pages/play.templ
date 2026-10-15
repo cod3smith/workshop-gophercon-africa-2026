@@ -169,7 +169,7 @@ templ Answer(props AnswerProps) {
 	}) {
 		@scoreboard(props.Game, len(props.Game.Results))
 		<section class="result">
-			<header class={ "result__head", tone(props.Result.Points) }>
+			<header class={ "result__head", ToneFor(props.Result.Points) }>
 				<p class="result__verdict">{ verdict(props.Result.DistanceKm) }</p>
 				<p class="result__distance">{ distanceLabel(props.Result.DistanceKm) }</p>
 				<p class="result__points">
@@ -251,9 +251,9 @@ templ Over(props OverProps) {
 			}
 			<ol class="rounds">
 				for i, result := range props.Game.Results {
-					<li class={ "rounds__row", tone(result.Points) }>
+					<li class={ "rounds__row", ToneFor(result.Points) }>
 						<span class="rounds__n mono">{ strconv.Itoa(i + 1) }</span>
-						<span class="rounds__medal" aria-hidden="true">{ game.Medal(result.Points) }</span>
+						<span class="medal" aria-hidden="true"></span>
 						<span class="rounds__what">
 							if name := props.playedName(i); name != "" {
 								<span class="rounds__name">{ name }</span>
@@ -300,7 +300,7 @@ templ scoreboard(g game.Game, round int) {
 		<ol class="pips" aria-label="Rounds played">
 			for i := range game.Rounds {
 				if i < len(g.Results) {
-					<li class="pip pip--done" aria-label="Played">{ game.Medal(g.Results[i].Points) }</li>
+					<li class={ "pip", "pip--done", ToneFor(g.Results[i].Points) } aria-label="Played"></li>
 				} else {
 					<li class="pip" aria-hidden="true"></li>
 				}
