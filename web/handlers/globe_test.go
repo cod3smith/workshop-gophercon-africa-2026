@@ -103,8 +103,8 @@ func TestGlobeFeed_IsOneArrayOfEverySightingWithAPosition(t *testing.T) {
 	assert.Equal(t, "Panthera leo (Linnaeus, 1758)", got["scientificName"])
 	assert.Equal(t, "Mammalia", got["class"])
 	assert.Equal(t, "Mammals", got["group"], "the class is named in English for the card, by the server and not twice")
-	assert.Equal(t, "Kenya", got["country"])
 	assert.Equal(t, "Maasai Mara, Kenya", got["place"])
+	assert.NotContains(t, got, "country", "the place already names the country, so the feed does not carry it twice")
 	assert.Equal(t, "9 March 2024", got["when"])
 	assert.Equal(t, "https://example.org/photos/1/small.jpg", got["thumbnail"])
 }

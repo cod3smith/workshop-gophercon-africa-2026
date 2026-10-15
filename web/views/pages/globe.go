@@ -37,8 +37,7 @@ type (
 		// Group is what the class is called in English, named here rather
 		// than in the script, so the card on the globe calls a Crocodylia a
 		// crocodile in the same words the list beside it does.
-		Group   string `json:"group"`
-		Country string `json:"country"`
+		Group string `json:"group"`
 		// Place is the whole place, as the list beside the globe prints it,
 		// so a point and its row never disagree about where it was.
 		Place string `json:"place"`
@@ -72,7 +71,6 @@ func GlobePoints(sightings []sighting.Sighting) []GlobePoint {
 			ScientificName: scientificLine(s),
 			Class:          s.Species.Class,
 			Group:          classLabel(s.Species.Class),
-			Country:        cmp.Or(s.Location.Country, "Country unrecorded"),
 			Place:          place(s.Location),
 			When:           dateLabel(s),
 		}
