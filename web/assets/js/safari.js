@@ -175,6 +175,15 @@
 
 		map.setView([12, 14], 2);
 
+		// The typed route ships open so a page with no JavaScript, or no
+		// Leaflet, has it. Only now that the map is built does it fold away.
+		// Folded is not hidden: the summary stays focusable and the fields
+		// stay in the accessibility tree, so it is still one keypress away.
+		const typed = document.querySelector("details.coords");
+		if (typed) {
+			typed.open = false;
+		}
+
 		// Both are useless without a live map, so the page ships them hidden
 		// and they appear only once there is something to aim at.
 		if (crosshair) {

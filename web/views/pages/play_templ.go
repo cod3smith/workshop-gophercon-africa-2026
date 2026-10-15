@@ -105,7 +105,7 @@ func Question(props QuestionProps) templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "</figcaption></figure><section class=\"guess\" aria-label=\"Your guess\"><div class=\"mapframe\"><div class=\"map\" data-safari-map=\"safari-map\" role=\"group\" aria-label=\"Map to place your guess on\" aria-describedby=\"map-help\"><p class=\"map__fallback\"><!-- One child, so the grid centres the sentence rather than splitting it around the link. --><span>The map needs JavaScript and a connection. Without it, type a latitude and longitude below, or read every sighting on <a href=\"/\">the record</a>.</span></p></div><!-- Revealed by safari.js: it only means anything once the map is live. --><div class=\"crosshair\" data-crosshair hidden aria-hidden=\"true\"><svg viewBox=\"0 0 48 48\" focusable=\"false\"><path class=\"crosshair__arm\" d=\"M24 4v12M24 32v12M4 24h12M32 24h12\"></path> <circle class=\"crosshair__ring\" cx=\"24\" cy=\"24\" r=\"9\"></circle> <circle class=\"crosshair__dot\" cx=\"24\" cy=\"24\" r=\"1.5\"></circle></svg></div></div><!--\n\t\t\t\t\tA guess does not need the map: a screen reader cannot aim a\n\t\t\t\t\tcrosshair, and a blocked CDN leaves no map to click. These are\n\t\t\t\t\tthe form's real fields, and the map only fills them in.\n\t\t\t\t--><div class=\"coords\"><div class=\"coords__field\"><label for=\"lat\">Latitude</label> <input type=\"number\" step=\"any\" min=\"-90\" max=\"90\" name=\"lat\" id=\"lat\" required autocomplete=\"off\" aria-describedby=\"coords-help\"></div><div class=\"coords__field\"><label for=\"lng\">Longitude</label> <input type=\"number\" step=\"any\" min=\"-180\" max=\"180\" name=\"lng\" id=\"lng\" required autocomplete=\"off\" aria-describedby=\"coords-help\"></div><p class=\"coords__help\" id=\"coords-help\">Latitude runs from -90 (south) to 90 (north), longitude from -180 (west) to 180 (east).</p></div><div class=\"guess__bar\"><!-- Revealed by safari.js: there is no crosshair to read until the map is live. --><p class=\"field__readout\" id=\"crosshair-readout\" aria-live=\"polite\" hidden></p><output class=\"field__readout\" id=\"guess-readout\" for=\"lat lng\">No pin dropped yet</output><!-- type=\"button\": this sits inside the guess form and must not submit it. --><button class=\"button\" type=\"button\" data-drop-centre hidden>Place pin at crosshair</button> <button class=\"button button--primary button--large\" type=\"submit\" id=\"guess-submit\">Lock it in</button></div></section><section class=\"panel\" aria-labelledby=\"clues-heading\"><h2 id=\"clues-heading\" class=\"panel__title\">What we know</h2><dl class=\"clues\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "</figcaption></figure><section class=\"guess\" aria-label=\"Your guess\"><div class=\"mapframe\"><div class=\"map\" data-safari-map=\"safari-map\" role=\"group\" aria-label=\"Map to place your guess on\" aria-describedby=\"map-help\"><p class=\"map__fallback\"><!-- One child, so the grid centres the sentence rather than splitting it around the link. --><span>The map needs JavaScript and a connection. Without it, type a latitude and longitude below, or read every sighting on <a href=\"/\">the record</a>.</span></p></div><!-- Revealed by safari.js: it only means anything once the map is live. --><div class=\"crosshair\" data-crosshair hidden aria-hidden=\"true\"><svg viewBox=\"0 0 48 48\" focusable=\"false\"><path class=\"crosshair__arm\" d=\"M24 4v12M24 32v12M4 24h12M32 24h12\"></path> <circle class=\"crosshair__ring\" cx=\"24\" cy=\"24\" r=\"9\"></circle> <circle class=\"crosshair__dot\" cx=\"24\" cy=\"24\" r=\"1.5\"></circle></svg></div></div><!--\n\t\t\t\t\tA guess does not need the map: a screen reader cannot aim a\n\t\t\t\t\tcrosshair, and a blocked CDN leaves no map to click. These are\n\t\t\t\t\tthe form's real fields, and the map only fills them in.\n\n\t\t\t\t\tIt ships open, so with no JavaScript or no Leaflet the fields\n\t\t\t\t\tare simply there. safari.js folds it away once the map is\n\t\t\t\t\tlive; a folded <details> is still one keypress from open.\n\t\t\t\t--><details class=\"coords\" open><summary>Enter coordinates instead</summary><div class=\"coords__grid\"><div class=\"coords__field\"><label for=\"lat\">Latitude</label> <input type=\"number\" step=\"any\" min=\"-90\" max=\"90\" name=\"lat\" id=\"lat\" required autocomplete=\"off\" aria-describedby=\"coords-help\"></div><div class=\"coords__field\"><label for=\"lng\">Longitude</label> <input type=\"number\" step=\"any\" min=\"-180\" max=\"180\" name=\"lng\" id=\"lng\" required autocomplete=\"off\" aria-describedby=\"coords-help\"></div><p class=\"coords__help\" id=\"coords-help\">Latitude runs from -90 (south) to 90 (north), longitude from -180 (west) to 180 (east).</p></div></details><div class=\"guess__bar\"><!-- Revealed by safari.js: there is no crosshair to read until the map is live. --><p class=\"field__readout\" id=\"crosshair-readout\" aria-live=\"polite\" hidden></p><output class=\"field__readout\" id=\"guess-readout\" for=\"lat lng\">No pin dropped yet</output><!-- type=\"button\": this sits inside the guess form and must not submit it. --><button class=\"button\" type=\"button\" data-drop-centre hidden>Place pin at crosshair</button> <button class=\"button button--primary button--large\" type=\"submit\" id=\"guess-submit\">Lock it in</button></div></section><section class=\"panel\" aria-labelledby=\"clues-heading\"><h2 id=\"clues-heading\" class=\"panel__title\">What we know</h2><dl class=\"clues\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -117,7 +117,7 @@ func Question(props QuestionProps) templ.Component {
 				var templ_7745c5c3_Var7 string
 				templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs(clue.Label)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/views/pages/play.templ`, Line: 131, Col: 23}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/views/pages/play.templ`, Line: 138, Col: 23}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var7))
 				if templ_7745c5c3_Err != nil {
@@ -135,7 +135,7 @@ func Question(props QuestionProps) templ.Component {
 					var templ_7745c5c3_Var8 string
 					templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.ResolveAttributeValue(clue.Title)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/views/pages/play.templ`, Line: 134, Col: 27}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/views/pages/play.templ`, Line: 141, Col: 27}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var8)
 					if templ_7745c5c3_Err != nil {
@@ -153,7 +153,7 @@ func Question(props QuestionProps) templ.Component {
 				var templ_7745c5c3_Var9 string
 				templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinStringErrs(clue.Value)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/views/pages/play.templ`, Line: 136, Col: 20}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/views/pages/play.templ`, Line: 143, Col: 20}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var9))
 				if templ_7745c5c3_Err != nil {
@@ -255,7 +255,7 @@ func Answer(props AnswerProps) templ.Component {
 			var templ_7745c5c3_Var14 string
 			templ_7745c5c3_Var14, templ_7745c5c3_Err = templ.JoinStringErrs(verdict(props.Result.DistanceKm))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/views/pages/play.templ`, Line: 173, Col: 65}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/views/pages/play.templ`, Line: 180, Col: 65}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var14))
 			if templ_7745c5c3_Err != nil {
@@ -268,7 +268,7 @@ func Answer(props AnswerProps) templ.Component {
 			var templ_7745c5c3_Var15 string
 			templ_7745c5c3_Var15, templ_7745c5c3_Err = templ.JoinStringErrs(distanceLabel(props.Result.DistanceKm))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/views/pages/play.templ`, Line: 174, Col: 72}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/views/pages/play.templ`, Line: 181, Col: 72}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var15))
 			if templ_7745c5c3_Err != nil {
@@ -281,7 +281,7 @@ func Answer(props AnswerProps) templ.Component {
 			var templ_7745c5c3_Var16 string
 			templ_7745c5c3_Var16, templ_7745c5c3_Err = templ.JoinStringErrs(thousands(props.Result.Points))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/views/pages/play.templ`, Line: 176, Col: 73}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/views/pages/play.templ`, Line: 183, Col: 73}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var16))
 			if templ_7745c5c3_Err != nil {
@@ -294,7 +294,7 @@ func Answer(props AnswerProps) templ.Component {
 			var templ_7745c5c3_Var17 string
 			templ_7745c5c3_Var17, templ_7745c5c3_Err = templ.ResolveAttributeValue(PhotoURL(photo(props.Sighting), "medium"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/views/pages/play.templ`, Line: 187, Col: 57}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/views/pages/play.templ`, Line: 194, Col: 57}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var17)
 			if templ_7745c5c3_Err != nil {
@@ -307,7 +307,7 @@ func Answer(props AnswerProps) templ.Component {
 			var templ_7745c5c3_Var18 string
 			templ_7745c5c3_Var18, templ_7745c5c3_Err = templ.ResolveAttributeValue(speciesName(props.Sighting))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/views/pages/play.templ`, Line: 187, Col: 118}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/views/pages/play.templ`, Line: 194, Col: 118}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var18)
 			if templ_7745c5c3_Err != nil {
@@ -320,7 +320,7 @@ func Answer(props AnswerProps) templ.Component {
 			var templ_7745c5c3_Var19 string
 			templ_7745c5c3_Var19, templ_7745c5c3_Err = templ.JoinStringErrs(Credit(photo(props.Sighting), props.Sighting.Species.ScientificName))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/views/pages/play.templ`, Line: 188, Col: 87}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/views/pages/play.templ`, Line: 195, Col: 87}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var19))
 			if templ_7745c5c3_Err != nil {
@@ -333,7 +333,7 @@ func Answer(props AnswerProps) templ.Component {
 			var templ_7745c5c3_Var20 string
 			templ_7745c5c3_Var20, templ_7745c5c3_Err = templ.JoinStringErrs(speciesName(props.Sighting))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/views/pages/play.templ`, Line: 191, Col: 59}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/views/pages/play.templ`, Line: 198, Col: 59}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var20))
 			if templ_7745c5c3_Err != nil {
@@ -351,7 +351,7 @@ func Answer(props AnswerProps) templ.Component {
 				var templ_7745c5c3_Var21 string
 				templ_7745c5c3_Var21, templ_7745c5c3_Err = templ.JoinStringErrs(props.Sighting.Species.ScientificName)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/views/pages/play.templ`, Line: 193, Col: 75}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/views/pages/play.templ`, Line: 200, Col: 75}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var21))
 				if templ_7745c5c3_Err != nil {
@@ -369,7 +369,7 @@ func Answer(props AnswerProps) templ.Component {
 			var templ_7745c5c3_Var22 string
 			templ_7745c5c3_Var22, templ_7745c5c3_Err = templ.JoinStringErrs(distanceLabel(props.Result.DistanceKm))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/views/pages/play.templ`, Line: 198, Col: 69}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/views/pages/play.templ`, Line: 205, Col: 69}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var22))
 			if templ_7745c5c3_Err != nil {
@@ -382,7 +382,7 @@ func Answer(props AnswerProps) templ.Component {
 			var templ_7745c5c3_Var23 string
 			templ_7745c5c3_Var23, templ_7745c5c3_Err = templ.JoinStringErrs(place(props.Sighting.Location))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/views/pages/play.templ`, Line: 204, Col: 42}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/views/pages/play.templ`, Line: 211, Col: 42}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var23))
 			if templ_7745c5c3_Err != nil {
@@ -395,7 +395,7 @@ func Answer(props AnswerProps) templ.Component {
 			var templ_7745c5c3_Var24 string
 			templ_7745c5c3_Var24, templ_7745c5c3_Err = templ.JoinStringErrs(props.Sighting.HappenedAt.Format("2 January 2006"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/views/pages/play.templ`, Line: 208, Col: 62}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/views/pages/play.templ`, Line: 215, Col: 62}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var24))
 			if templ_7745c5c3_Err != nil {
@@ -408,7 +408,7 @@ func Answer(props AnswerProps) templ.Component {
 			var templ_7745c5c3_Var25 string
 			templ_7745c5c3_Var25, templ_7745c5c3_Err = templ.JoinStringErrs(strconv.FormatFloat(props.Sighting.Location.Latitude, 'f', 4, 64))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/views/pages/play.templ`, Line: 213, Col: 74}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/views/pages/play.templ`, Line: 220, Col: 74}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var25))
 			if templ_7745c5c3_Err != nil {
@@ -421,7 +421,7 @@ func Answer(props AnswerProps) templ.Component {
 			var templ_7745c5c3_Var26 string
 			templ_7745c5c3_Var26, templ_7745c5c3_Err = templ.JoinStringErrs(strconv.FormatFloat(props.Sighting.Location.Longitude, 'f', 4, 64))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/views/pages/play.templ`, Line: 214, Col: 75}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/views/pages/play.templ`, Line: 221, Col: 75}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var26))
 			if templ_7745c5c3_Err != nil {
@@ -439,7 +439,7 @@ func Answer(props AnswerProps) templ.Component {
 				var templ_7745c5c3_Var27 templ.SafeURL
 				templ_7745c5c3_Var27, templ_7745c5c3_Err = templ.JoinURLErrs(templ.URL(props.Sighting.ReferenceURL))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/views/pages/play.templ`, Line: 220, Col: 67}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/views/pages/play.templ`, Line: 227, Col: 67}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var27))
 				if templ_7745c5c3_Err != nil {
@@ -530,7 +530,7 @@ func Over(props OverProps) templ.Component {
 			var templ_7745c5c3_Var30 string
 			templ_7745c5c3_Var30, templ_7745c5c3_Err = templ.JoinStringErrs(game.Name)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/views/pages/play.templ`, Line: 251, Col: 40}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/views/pages/play.templ`, Line: 258, Col: 40}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var30))
 			if templ_7745c5c3_Err != nil {
@@ -543,7 +543,7 @@ func Over(props OverProps) templ.Component {
 			var templ_7745c5c3_Var31 string
 			templ_7745c5c3_Var31, templ_7745c5c3_Err = templ.JoinStringErrs(thousands(props.Game.Total()))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/views/pages/play.templ`, Line: 253, Col: 62}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/views/pages/play.templ`, Line: 260, Col: 62}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var31))
 			if templ_7745c5c3_Err != nil {
@@ -556,7 +556,7 @@ func Over(props OverProps) templ.Component {
 			var templ_7745c5c3_Var32 string
 			templ_7745c5c3_Var32, templ_7745c5c3_Err = templ.JoinStringErrs(thousands(game.MaxScore))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/views/pages/play.templ`, Line: 254, Col: 57}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/views/pages/play.templ`, Line: 261, Col: 57}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var32))
 			if templ_7745c5c3_Err != nil {
@@ -569,7 +569,7 @@ func Over(props OverProps) templ.Component {
 			var templ_7745c5c3_Var33 string
 			templ_7745c5c3_Var33, templ_7745c5c3_Err = templ.JoinStringErrs(props.Game.Rank())
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/views/pages/play.templ`, Line: 256, Col: 46}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/views/pages/play.templ`, Line: 263, Col: 46}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var33))
 			if templ_7745c5c3_Err != nil {
@@ -605,7 +605,7 @@ func Over(props OverProps) templ.Component {
 				var templ_7745c5c3_Var36 string
 				templ_7745c5c3_Var36, templ_7745c5c3_Err = templ.JoinStringErrs(best)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/views/pages/play.templ`, Line: 258, Col: 55}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/views/pages/play.templ`, Line: 265, Col: 55}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var36))
 				if templ_7745c5c3_Err != nil {
@@ -623,7 +623,7 @@ func Over(props OverProps) templ.Component {
 			var templ_7745c5c3_Var37 string
 			templ_7745c5c3_Var37, templ_7745c5c3_Err = templ.JoinStringErrs(props.Game.Share(props.URL))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/views/pages/play.templ`, Line: 267, Col: 74}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/views/pages/play.templ`, Line: 274, Col: 74}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var37))
 			if templ_7745c5c3_Err != nil {
@@ -659,7 +659,7 @@ func Over(props OverProps) templ.Component {
 				var templ_7745c5c3_Var40 string
 				templ_7745c5c3_Var40, templ_7745c5c3_Err = templ.JoinStringErrs(strconv.Itoa(i + 1))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/views/pages/play.templ`, Line: 277, Col: 56}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/views/pages/play.templ`, Line: 284, Col: 56}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var40))
 				if templ_7745c5c3_Err != nil {
@@ -677,7 +677,7 @@ func Over(props OverProps) templ.Component {
 					var templ_7745c5c3_Var41 string
 					templ_7745c5c3_Var41, templ_7745c5c3_Err = templ.JoinStringErrs(name)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/views/pages/play.templ`, Line: 281, Col: 41}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/views/pages/play.templ`, Line: 288, Col: 41}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var41))
 					if templ_7745c5c3_Err != nil {
@@ -690,7 +690,7 @@ func Over(props OverProps) templ.Component {
 					var templ_7745c5c3_Var42 string
 					templ_7745c5c3_Var42, templ_7745c5c3_Err = templ.JoinStringErrs(props.playedPlace(i))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/views/pages/play.templ`, Line: 282, Col: 58}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/views/pages/play.templ`, Line: 289, Col: 58}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var42))
 					if templ_7745c5c3_Err != nil {
@@ -708,7 +708,7 @@ func Over(props OverProps) templ.Component {
 					var templ_7745c5c3_Var43 string
 					templ_7745c5c3_Var43, templ_7745c5c3_Err = templ.JoinStringErrs(strconv.Itoa(i + 1))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/views/pages/play.templ`, Line: 284, Col: 62}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/views/pages/play.templ`, Line: 291, Col: 62}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var43))
 					if templ_7745c5c3_Err != nil {
@@ -726,7 +726,7 @@ func Over(props OverProps) templ.Component {
 				var templ_7745c5c3_Var44 string
 				templ_7745c5c3_Var44, templ_7745c5c3_Err = templ.JoinStringErrs(distanceLabel(result.DistanceKm))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/views/pages/play.templ`, Line: 286, Col: 72}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/views/pages/play.templ`, Line: 293, Col: 72}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var44))
 				if templ_7745c5c3_Err != nil {
@@ -739,7 +739,7 @@ func Over(props OverProps) templ.Component {
 				var templ_7745c5c3_Var45 string
 				templ_7745c5c3_Var45, templ_7745c5c3_Err = templ.ResolveAttributeValue(barScale(result.Points))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/views/pages/play.templ`, Line: 289, Col: 70}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/views/pages/play.templ`, Line: 296, Col: 70}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var45)
 				if templ_7745c5c3_Err != nil {
@@ -752,7 +752,7 @@ func Over(props OverProps) templ.Component {
 				var templ_7745c5c3_Var46 string
 				templ_7745c5c3_Var46, templ_7745c5c3_Err = templ.JoinStringErrs(thousands(result.Points))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/views/pages/play.templ`, Line: 291, Col: 66}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/views/pages/play.templ`, Line: 298, Col: 66}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var46))
 				if templ_7745c5c3_Err != nil {
@@ -828,7 +828,7 @@ func scoreboard(g game.Game, round int) templ.Component {
 		var templ_7745c5c3_Var48 string
 		templ_7745c5c3_Var48, templ_7745c5c3_Err = templ.JoinStringErrs(roundLabel(round))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/views/pages/play.templ`, Line: 312, Col: 50}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/views/pages/play.templ`, Line: 319, Col: 50}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var48))
 		if templ_7745c5c3_Err != nil {
@@ -876,7 +876,7 @@ func scoreboard(g game.Game, round int) templ.Component {
 		var templ_7745c5c3_Var51 string
 		templ_7745c5c3_Var51, templ_7745c5c3_Err = templ.JoinStringErrs(thousands(g.Total()))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/views/pages/play.templ`, Line: 323, Col: 44}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/views/pages/play.templ`, Line: 330, Col: 44}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var51))
 		if templ_7745c5c3_Err != nil {

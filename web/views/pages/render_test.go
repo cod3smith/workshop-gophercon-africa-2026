@@ -67,6 +67,37 @@ func TestQuestion_OffersAGuessWithoutTheMap(t *testing.T) {
 	assert.NotContains(t, submit, "disabled")
 }
 
+func TestQuestion_ShipsTheTypedRouteOpenAndLeavesClosingItToTheMap(t *testing.T) {
+	t.Parallel()
+
+	s := sighting.Sighting{
+		ID:       uuid.New(),
+		Location: sighting.Location{Coordinates: sighting.Coordinates{Latitude: -1.29, Longitude: 36.82}},
+		Media:    []sighting.Media{{Type: "StillImage", URL: "https://example.org/animal.jpg"}},
+	}
+
+	var buf bytes.Buffer
+	err := pages.Question(pages.QuestionProps{Game: game.New([]uuid.UUID{s.ID}), Sighting: s}).Render(context.Background(), &buf)
+	require.NoError(t, err)
+	html := buf.String()
+
+	// The typed route is folded away once the map is live, but it must
+	// arrive unfolded. A visitor with no JavaScript, or with Leaflet blocked,
+	// has nothing to unfold it with; shipping it closed and opening it from
+	// script would lock out exactly the people it exists for. So safari.js
+	// closes it after the map is built, and the markup says open.
+	fold := regexp.MustCompile(`(?s)<details[^>]*\sopen(?:[\s=][^>]*)?>.*?</details>`).FindString(html)
+	require.NotEmpty(t, fold, "the typed route should be a <details> that ships open")
+	assert.Contains(t, fold, `id="lat"`)
+	assert.Contains(t, fold, `id="lng"`)
+	assert.Contains(t, fold, "<summary", "the fold needs a name a person can find")
+	assert.Contains(t, fold, "Enter coordinates instead")
+
+	// Folding is not hiding: the summary stays focusable and the fields stay
+	// in the accessibility tree, which display:none and hidden would undo.
+	assert.NotRegexp(t, `<details[^>]*\s(hidden|style=)`, html)
+}
+
 func TestQuestion_KeepsTheTypedRouteDescribedAndTheCluesAnnounced(t *testing.T) {
 	t.Parallel()
 

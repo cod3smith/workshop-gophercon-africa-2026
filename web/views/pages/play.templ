@@ -76,40 +76,47 @@ templ Question(props QuestionProps) {
 					A guess does not need the map: a screen reader cannot aim a
 					crosshair, and a blocked CDN leaves no map to click. These are
 					the form's real fields, and the map only fills them in.
+
+					It ships open, so with no JavaScript or no Leaflet the fields
+					are simply there. safari.js folds it away once the map is
+					live; a folded <details> is still one keypress from open.
 				-->
-				<div class="coords">
-					<div class="coords__field">
-						<label for="lat">Latitude</label>
-						<input
-							type="number"
-							step="any"
-							min="-90"
-							max="90"
-							name="lat"
-							id="lat"
-							required
-							autocomplete="off"
-							aria-describedby="coords-help"
-						/>
+				<details class="coords" open>
+					<summary>Enter coordinates instead</summary>
+					<div class="coords__grid">
+						<div class="coords__field">
+							<label for="lat">Latitude</label>
+							<input
+								type="number"
+								step="any"
+								min="-90"
+								max="90"
+								name="lat"
+								id="lat"
+								required
+								autocomplete="off"
+								aria-describedby="coords-help"
+							/>
+						</div>
+						<div class="coords__field">
+							<label for="lng">Longitude</label>
+							<input
+								type="number"
+								step="any"
+								min="-180"
+								max="180"
+								name="lng"
+								id="lng"
+								required
+								autocomplete="off"
+								aria-describedby="coords-help"
+							/>
+						</div>
+						<p class="coords__help" id="coords-help">
+							Latitude runs from -90 (south) to 90 (north), longitude from -180 (west) to 180 (east).
+						</p>
 					</div>
-					<div class="coords__field">
-						<label for="lng">Longitude</label>
-						<input
-							type="number"
-							step="any"
-							min="-180"
-							max="180"
-							name="lng"
-							id="lng"
-							required
-							autocomplete="off"
-							aria-describedby="coords-help"
-						/>
-					</div>
-					<p class="coords__help" id="coords-help">
-						Latitude runs from -90 (south) to 90 (north), longitude from -180 (west) to 180 (east).
-					</p>
-				</div>
+				</details>
 				<div class="guess__bar">
 					<!-- Revealed by safari.js: there is no crosshair to read until the map is live. -->
 					<p class="field__readout" id="crosshair-readout" aria-live="polite" hidden></p>
