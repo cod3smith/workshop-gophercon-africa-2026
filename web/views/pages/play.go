@@ -410,18 +410,6 @@ func barScale(points int) string {
 	return fmt.Sprintf("%.3f", float64(points)/float64(game.MaxRoundScore))
 }
 
-// homeTiles is how many sightings the home page shows. The figures above
-// them count the whole record; this is just what fits on a page.
-const homeTiles = 60
-
-// tiles is the slice of the record the home page renders.
-func tiles(sightings []sighting.Sighting) []sighting.Sighting {
-	if len(sightings) > homeTiles {
-		return sightings[:homeTiles]
-	}
-	return sightings
-}
-
 // speciesName is what the animal is called, once the round is over.
 //
 // GBIF takes vernacular names as its contributors typed them, so "spotted

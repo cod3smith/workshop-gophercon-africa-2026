@@ -303,7 +303,8 @@ a:hover {
 	font-size: 0.82rem;
 }
 
-.button:disabled {
+.button:disabled,
+.button[aria-disabled="true"] {
 	opacity: 0.4;
 	cursor: not-allowed;
 	transform: none;
@@ -457,6 +458,15 @@ a:hover {
 	list-style: none;
 }
 
+/* The whole tile is the link, so the keyboard meets it once. It carries the
+   text colour itself, or the link colour would tint every line inside. */
+.tile__link {
+	display: block;
+	height: 100%;
+	color: inherit;
+	text-decoration: none;
+}
+
 .tile article {
 	position: relative;
 	height: 100%;
@@ -467,9 +477,14 @@ a:hover {
 	transition: border-color 220ms ease, transform 220ms ease;
 }
 
-.tile article:hover {
+.tile__link:hover article,
+.tile__link:focus-visible article {
 	border-color: var(--edge);
 	transform: translateY(-3px);
+}
+
+.tile__link:focus-visible {
+	outline-offset: 4px;
 }
 
 .tile__photo {
@@ -481,7 +496,8 @@ a:hover {
 	transition: filter 320ms ease, transform 320ms ease;
 }
 
-.tile article:hover .tile__photo {
+.tile__link:hover .tile__photo,
+.tile__link:focus-visible .tile__photo {
 	filter: none;
 	transform: scale(1.03);
 }
@@ -520,6 +536,39 @@ a:hover {
 .tile__dot {
 	opacity: 0.5;
 	padding: 0 0.25rem;
+}
+
+/* --- Turning the pages of the record ------------------------------------ */
+
+.pager {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 1rem;
+	align-items: center;
+	justify-content: space-between;
+	padding-top: 1.25rem;
+	border-top: 1px solid var(--line);
+	margin-top: 2.5rem;
+}
+
+.pager__status {
+	margin: 0;
+	color: var(--paper-dim);
+	font-size: 0.85rem;
+}
+
+/* On a small screen the position sits between the two controls and each
+   control takes a share, so both are a thumb wide. */
+@media (max-width: 32rem) {
+	.pager .button {
+		flex: 1;
+	}
+
+	.pager__status {
+		order: -1;
+		flex-basis: 100%;
+		text-align: center;
+	}
 }
 
 .empty {

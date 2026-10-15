@@ -3,19 +3,20 @@ package pages
 import (
 	"strconv"
 	"workshop/internal/domain/game"
-	"workshop/internal/domain/sighting"
 	"workshop/web/views/components"
 	"workshop/web/views/layout"
 )
 
-templ Home(sightings []sighting.Sighting) {
+// Home is the front page: the pitch for the game, and the record a page at
+// a time. The figures in the hero describe the whole record, not the page.
+templ Home(props HomeProps) {
 	@layout.Base(layout.BaseProps{
-		Title:       "The record",
+		Title:       props.title(),
 		Description: "Occurrence records of wild animals, and a game: look at the photograph and guess where on earth it was taken.",
 		// The empty record has a gopher of its own, so the footer waits.
-		FooterGopher: len(sightings) > 0,
+		FooterGopher: len(props.Sightings) > 0,
 	}) {
-		{{ summary := sighting.Summarise(sightings) }}
+		{{ summary := props.Totals }}
 		<section class="hero">
 			<p class="hero__eyebrow">GopherCon Africa 2026 · Nairobi</p>
 			<h1 class="hero__title">
@@ -62,12 +63,12 @@ templ Home(sightings []sighting.Sighting) {
 				<h2 id="record-heading">The record</h2>
 				if summary.Sightings > 0 {
 					<p class="record__range">
-						The { thousands(len(tiles(sightings))) } most recent of { thousands(summary.Sightings) }
+						{ thousands(props.First) }–{ thousands(props.last()) } of { thousands(summary.Sightings) }
 						· { summary.Earliest.Format("Jan 2006") } — { summary.Latest.Format("Jan 2006") }
 					</p>
 				}
 			</header>
-			if len(sightings) == 0 {
+			if len(props.Sightings) == 0 {
 				<div class="empty">
 					@components.GopherPeek()
 					<p>
@@ -77,30 +78,47 @@ templ Home(sightings []sighting.Sighting) {
 				</div>
 			} else {
 				<ul class="tiles">
-					for _, s := range tiles(sightings) {
+					for _, s := range props.Sightings {
 						<li class="tile">
-							<article>
-								{{ image := photo(s) }}
-								if image.URL != "" {
-									<img class="tile__photo" src={ PhotoURL(image, "medium") } width="500" height="375" alt={ speciesName(s) } loading="lazy"/>
-								} else {
-									<div class="tile__photo tile__photo--none" aria-hidden="true"></div>
-								}
-								<div class="tile__body">
-									<h3 class="tile__name">{ speciesName(s) }</h3>
-									<p class="tile__place">{ place(s.Location) }</p>
-									<p class="tile__meta mono">
-										{ s.HappenedAt.Format("Jan 2006") }
-										if s.Weather.Temperature.Actual != 0 {
-											<span class="tile__dot">·</span>
-											{ strconv.FormatFloat(s.Weather.Temperature.Actual, 'f', 0, 64) }°C
-										}
-									</p>
-								</div>
-							</article>
+							<a class="tile__link" href={ recordHref(s) }>
+								<article>
+									{{ image := photo(s) }}
+									if image.URL != "" {
+										<img class="tile__photo" src={ PhotoURL(image, "medium") } width="500" height="375" alt="" loading="lazy"/>
+									} else {
+										<div class="tile__photo tile__photo--none" aria-hidden="true"></div>
+									}
+									<div class="tile__body">
+										<h3 class="tile__name">{ speciesName(s) }</h3>
+										<p class="tile__place">{ place(s.Location) }</p>
+										<p class="tile__meta mono">
+											{ s.HappenedAt.Format("Jan 2006") }
+											if hasWeather(s) {
+												<span class="tile__dot">·</span>
+												{ strconv.FormatFloat(s.Weather.Temperature.Actual, 'f', 0, 64) }°C
+											}
+										</p>
+									</div>
+								</article>
+							</a>
 						</li>
 					}
 				</ul>
+				if props.Pages > 1 {
+					<nav class="pager" aria-label="Pages of the record">
+						if props.Page > 1 {
+							<a href={ pageHref(props.Page - 1) } rel="prev" class="button button--ghost">Previous</a>
+						} else {
+							<a role="link" aria-disabled="true" class="button button--ghost">Previous</a>
+						}
+						<p class="pager__status mono">Page { thousands(props.Page) } of { thousands(props.Pages) }</p>
+						if props.Page < props.Pages {
+							<a href={ pageHref(props.Page + 1) } rel="next" class="button button--ghost">Next</a>
+						} else {
+							<a role="link" aria-disabled="true" class="button button--ghost">Next</a>
+						}
+					</nav>
+				}
 			}
 		</section>
 	}

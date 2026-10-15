@@ -209,11 +209,11 @@ func TestHome_ShipsMeasuredThumbnailsNotOriginals(t *testing.T) {
 	}
 
 	var buf bytes.Buffer
-	err := pages.Home([]sighting.Sighting{s}).Render(context.Background(), &buf)
+	err := pages.Home(pages.HomeProps{Sightings: []sighting.Sighting{s}, Page: 1, Pages: 1, First: 1}).Render(context.Background(), &buf)
 	require.NoError(t, err)
 	html := buf.String()
 
-	// Sixty originals on one page stall conference wifi, and without
+	// Two dozen originals on one page stall conference wifi, and without
 	// dimensions each one shoves the page down as it lands.
 	img := regexp.MustCompile(`<img[^>]*class="tile__photo"[^>]*>`).FindString(html)
 	require.NotEmpty(t, img)
@@ -792,7 +792,7 @@ func TestHome_ExplainsHowTheGameWorksBeneathTheCall(t *testing.T) {
 	t.Parallel()
 
 	var buf bytes.Buffer
-	require.NoError(t, pages.Home(nil).Render(context.Background(), &buf))
+	require.NoError(t, pages.Home(pages.HomeProps{Page: 1, Pages: 1}).Render(context.Background(), &buf))
 	html := buf.String()
 
 	// A shared score lands a stranger here or on a round; either way the
@@ -831,8 +831,8 @@ func TestGophers_AppearWhereThePageIsQuiet(t *testing.T) {
 
 	pagesWithGophers := map[string]string{
 		"the 404":         renderTo(t, pages.Error("No such page.", 404)),
-		"the empty state": renderTo(t, pages.Home(nil)),
-		"the footer":      renderTo(t, pages.Home([]sighting.Sighting{recorded})),
+		"the empty state": renderTo(t, pages.Home(pages.HomeProps{Page: 1, Pages: 1})),
+		"the footer":      renderTo(t, pages.Home(pages.HomeProps{Sightings: []sighting.Sighting{recorded}, Page: 1, Pages: 1, First: 1})),
 		"the answer":      answered(t),
 	}
 	for name, html := range pagesWithGophers {
@@ -863,7 +863,7 @@ func TestGophers_NeverRunOnTheRound(t *testing.T) {
 func TestGophers_AreDecorationOnly(t *testing.T) {
 	t.Parallel()
 
-	html := renderTo(t, pages.Error("No such page.", 404)) + renderTo(t, pages.Home(nil)) + answered(t)
+	html := renderTo(t, pages.Error("No such page.", 404)) + renderTo(t, pages.Home(pages.HomeProps{Page: 1, Pages: 1})) + answered(t)
 
 	svgs := regexp.MustCompile(`<svg[^>]*class="gopher[^>]*>`).FindAllString(html, -1)
 	require.NotEmpty(t, svgs)
