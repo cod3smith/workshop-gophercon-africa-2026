@@ -23,8 +23,10 @@ type Client struct {
 const BaseURL = "https://api.inaturalist.org/v1"
 
 // UserAgent says whose requests these are. iNaturalist rate limits, and an
-// anonymous client is the first to be limited.
-const UserAgent = "Sightings Safari (GopherCon Africa 2026 workshop app; gophercon.africa)"
+// anonymous client is the first to be limited. It asks for a contact that
+// leads back to whoever is calling, so this names the repository rather than
+// a domain, which is somewhere a person can actually be reached.
+const UserAgent = "Sightings Safari (GopherCon Africa 2026 workshop app; +https://github.com/cod3smith/workshop-gophercon-africa-2026)"
 
 // New creates a new iNaturalist API client. An empty baseURL falls back to
 // BaseURL; tests pass the address of a stub server.
