@@ -645,3 +645,77 @@ and confirm no new findings.
 ```bash
 git add web/ && git commit -m "feat: a few gophers, where the page is quiet"
 ```
+
+### Task 11: Hear the animal
+
+**Why:** requested by the owner. The record has no audio of its own — all 921
+media items are `StillImage` — so this comes from iNaturalist's API, the same
+source as the photographs, and needs no key.
+
+**Verified before planning:**
+- `GET https://api.inaturalist.org/v1/taxa?q=<scientific name>&rank=species` resolves a taxon id.
+- `GET https://api.inaturalist.org/v1/observations?taxon_id=<id>&sounds=true` returns observations whose `sounds[].file_url` is a playable file, e.g. `https://static.inaturalist.org/sounds/2171326.m4a`, `audio/mp4`, licence `cc-by-nc`.
+- Coverage is partial: humpback whale 18, lion 5, African penguin 1, cheetah 0, Nile crocodile 0. **Absence is the common case and must be designed for.**
+- Surveying coverage hit iNaturalist's rate limit, so a call per page view is not viable.
+
+**Scope decision:** audio appears on the **reveal and the record detail page only**,
+never on the question screen. A lion's roar names the species instantly and would
+hand the player the answer the clue panel deliberately withholds. (The alternative
+the owner may pick instead — a sound-only round as a harder mode — is a different,
+larger task and is not this one.)
+
+**Files:**
+- Create: `internal/clients/inaturalist/client.go`, `client_test.go`
+- Create: `internal/domain/species/sound.go` (the domain's idea of a recording)
+- Modify: `web/views/pages/play.templ` (the `Answer` view's reveal block only)
+- Modify: `web/assets/css/app.css`
+- Test: `web/views/pages/render_test.go`
+
+- [ ] **Step 1: Write the failing client test**
+
+Table-driven against an `httptest.Server` serving recorded iNaturalist JSON — never
+the live API in a test. Cover: a taxon with sounds, a taxon with none, a non-200,
+and a malformed body. The last three must all return "no recording" rather than an
+error that breaks a page.
+
+- [ ] **Step 2: Run it and watch it fail**
+
+Run: `go test ./internal/clients/inaturalist/ -v` — FAIL, package does not exist.
+
+- [ ] **Step 3: Implement `Sound(ctx context.Context, scientificName string) (species.Recording, bool, error)`**
+
+Resolve the taxon, then the first CC-licensed sound. `Recording` carries the file
+URL, the content type, the licence code and the attribution string — the licence is
+CC-BY-NC, so attribution is required, not optional.
+
+- [ ] **Step 4: Cache it, because a page view must not be a round trip**
+
+Store the resolved recording against the species row, or in memory with a TTL;
+the builder picks. Surveying coverage already hit iNaturalist's rate limit, so an
+uncached call per render will fail under any real traffic.
+
+- [ ] **Step 5: Write the failing view test**
+
+```go
+// A reveal with a recording offers it; one without says nothing at all.
+assert.Contains(t, withSound, "<audio")
+assert.Contains(t, withSound, "controls")
+assert.NotContains(t, withoutSound, "<audio")
+```
+
+- [ ] **Step 6: Offer it on the reveal**
+
+A native `<audio controls preload="none">` in the reveal block, with the
+photographer-style credit line naming the recordist and the licence. `preload="none"`
+so a conference phone does not fetch audio nobody asked for. No autoplay, ever.
+When there is no recording, render nothing — no empty player, no "unavailable".
+
+- [ ] **Step 7: Verify and commit**
+
+Run `go tool templ generate ./web/... && go test ./... 2>&1 | grep -E "FAIL|^---"`,
+then play a round of a species that has audio (humpback whale, lion) and one that
+does not (cheetah) and confirm both read correctly.
+
+```bash
+git add internal/ web/ && git commit -m "feat: hear the animal, where a recording exists"
+```
