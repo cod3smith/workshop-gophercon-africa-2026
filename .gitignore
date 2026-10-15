@@ -42,3 +42,7 @@ bin/*
 # Impeccable scratch: the critique snapshots are committed, these are not.
 .impeccable/live/
 .impeccable/hook.cache.json
+# The critique snapshots stay local. They carry an absolute path from the
+# machine that produced them, and their contents are a scored list of this
+# site's own remaining weaknesses — not something to hand a reader.
+.impeccable/critique/
