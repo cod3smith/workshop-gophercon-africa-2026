@@ -37,3 +37,4 @@ bin/*
 # would drop ones the build needs (golang.org/x/text has a coverage.go).
 !/vendor/**
 !/tools/gopls/vendor/**
+.superpowers/
