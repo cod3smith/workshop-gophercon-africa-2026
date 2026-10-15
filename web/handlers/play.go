@@ -178,7 +178,7 @@ func Guess(logger *slog.Logger, games GameService, session Session, sounds Sound
 			// Only now, with the guess in and the cookie written: the sound
 			// names the animal, so it is looked for after the round is
 			// scored and never on the question.
-			Recording: recording(ctx, sounds, sight),
+			Recording: recording(ctx, sounds, sight, soundTimeout),
 		}))
 	}
 }
@@ -204,10 +204,10 @@ func warm(ctx context.Context, sounds SoundService, s sighting.Sighting) {
 	}
 }
 
-// recording finds the sound of the animal in sight, or returns nil. The
-// lookup has its own short deadline, so a slow service cannot hold the
-// reveal up, and nothing it does wrong reaches the player.
-func recording(ctx context.Context, sounds SoundService, s sighting.Sighting) *species.Recording {
+// recording finds the sound of the animal in sight, or returns nil. It
+// waits at most wait, so a slow service cannot hold the page up, and
+// nothing it does wrong reaches the player.
+func recording(ctx context.Context, sounds SoundService, s sighting.Sighting, wait time.Duration) *species.Recording {
 	if sounds == nil {
 		return nil
 	}
@@ -217,7 +217,7 @@ func recording(ctx context.Context, sounds SoundService, s sighting.Sighting) *s
 		return nil
 	}
 
-	ctx, cancel := context.WithTimeout(ctx, soundTimeout)
+	ctx, cancel := context.WithTimeout(ctx, wait)
 	defer cancel()
 
 	found, ok := sounds.Sound(ctx, name)

@@ -1375,6 +1375,111 @@ a:hover {
 	color: var(--paper-dim);
 }
 
+/* --- A sighting --------------------------------------------------------- */
+
+.entry {
+	display: grid;
+	gap: 1.5rem;
+	padding: clamp(1.5rem, 5vw, 3rem) 0 5rem;
+}
+
+.entry__back {
+	justify-self: start;
+	font-family: var(--mono);
+	font-size: 0.72rem;
+	letter-spacing: 0.2em;
+	text-transform: uppercase;
+}
+
+.entry__back::before {
+	content: "\2190\00a0";
+}
+
+.entry__name {
+	margin: 0;
+	font-family: var(--display);
+	font-size: clamp(2.2rem, 6vw, 3.6rem);
+	font-weight: 500;
+	line-height: 1.05;
+}
+
+.entry__scientific {
+	margin: 0.3rem 0 0;
+	color: var(--paper-dim);
+	font-family: var(--display);
+	font-size: 1.15rem;
+	font-style: italic;
+}
+
+/* The photograph and the map are the evidence and the place; the panels
+   beside them are what the record says. The map follows the panels in
+   source order, so a phone reads photograph, facts, weather, sound, map,
+   and the grid lifts it under the photograph where there is room. */
+.entry__grid {
+	display: grid;
+	grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+	grid-template-areas:
+		"plate side"
+		"where side";
+	grid-template-rows: auto 1fr;
+	gap: 1.5rem;
+	align-items: start;
+}
+
+.entry__plate {
+	grid-area: plate;
+}
+
+/* No photograph: a sunken well of the same shape, saying so, not a gap. */
+.entry__plate--none {
+	display: grid;
+	place-items: center;
+	min-height: 14rem;
+	padding: 2rem;
+	border: 1px dashed var(--line);
+	border-radius: var(--radius);
+	background: var(--sunken);
+	color: var(--paper-dim);
+	text-align: center;
+}
+
+.entry__plate--none p {
+	margin: 0;
+}
+
+.entry__side {
+	grid-area: side;
+	display: grid;
+	gap: 1.5rem;
+	min-width: 0;
+}
+
+/* .panel names a grid area of the round's, which would put all three in the
+   same cell here. */
+.entry__side .panel {
+	grid-area: auto;
+}
+
+.entry__where {
+	grid-area: where;
+	display: grid;
+	gap: 0.8rem;
+	min-width: 0;
+}
+
+.entry__absent {
+	margin: 0;
+	padding: 1.4rem;
+	border: 1px dashed var(--line);
+	border-radius: var(--radius);
+	background: var(--sunken);
+	color: var(--paper-dim);
+}
+
+.map--record {
+	cursor: grab;
+}
+
 /* --- Footer ------------------------------------------------------------- */
 
 .footer {
@@ -1636,6 +1741,22 @@ a:hover {
 }
 
 /* --- Narrow screens ----------------------------------------------------- */
+
+@media (max-width: 60rem) {
+	.entry__grid {
+		grid-template-columns: minmax(0, 1fr);
+		grid-template-areas:
+			"plate"
+			"side"
+			"where";
+		grid-template-rows: none;
+		gap: 1rem;
+	}
+
+	.entry__side {
+		gap: 1rem;
+	}
+}
 
 @media (max-width: 60rem) {
 	.round {

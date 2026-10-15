@@ -1,0 +1,134 @@
+package pages
+
+import "workshop/web/views/layout"
+
+// Record is one sighting on a page of its own: the photograph, what the
+// record says, the weather that day, and where it was.
+//
+// This is the destination for the record's tiles, so it is also the page
+// that has to cope with whatever a tile could hold. A sighting with no
+// photograph, position, place, observer or recording says so in words
+// where the thing would have been, rather than leaving a blank.
+templ Record(props RecordProps) {
+	{{ s := props.Sighting }}
+	{{ image := photo(s) }}
+	@layout.Base(layout.BaseProps{
+		Title:       speciesName(s),
+		Description: recordDescription(s),
+		// Leaflet is only worth its weight when there is a place to put on it.
+		Map: hasPosition(s.Location),
+	}) {
+		<article class="entry">
+			<a class="entry__back" href="/">The record</a>
+			<header class="entry__head">
+				<h1 class="entry__name">{ speciesName(s) }</h1>
+				<p class="entry__scientific">{ scientificLine(s) }</p>
+			</header>
+			<div class="entry__grid">
+				if image.URL != "" {
+					<figure class="plate entry__plate">
+						<!-- A portrait photograph is letterboxed small in this box, so the plate opens it full size, with no script. -->
+						<a
+							class="plate__link"
+							href={ PhotoURL(image, "large") }
+							target="_blank"
+							rel="noopener"
+							aria-label="See the full photograph, opens in a new tab"
+						>
+							<img
+								class="plate__photo"
+								src={ PhotoURL(image, "large") }
+								width="1600"
+								height="900"
+								alt={ speciesName(s) }
+							/>
+						</a>
+						<figcaption class="plate__credit">{ Credit(image, s.Species.ScientificName) }</figcaption>
+					</figure>
+				} else {
+					<div class="entry__plate entry__plate--none">
+						<p>No photograph was kept for this sighting.</p>
+					</div>
+				}
+				<div class="entry__side">
+					<section class="panel" aria-labelledby="facts-heading">
+						<h2 id="facts-heading" class="panel__title">What was recorded</h2>
+						<dl class="clues">
+							for _, fact := range facts(s) {
+								<div class="clue">
+									<dt>{ fact.Label }</dt>
+									<dd
+										if fact.Title != "" {
+											title={ fact.Title }
+										}
+									>{ fact.Value }</dd>
+								</div>
+							}
+							<div class="clue">
+								<dt>Position</dt>
+								<dd class="mono">{ positionLabel(s.Location) }</dd>
+							</div>
+						</dl>
+						if s.Remarks != "" {
+							<p class="panel__hint">{ s.Remarks }</p>
+						}
+						if s.ReferenceURL != "" {
+							<p class="panel__hint">
+								<a class="link" href={ templ.URL(s.ReferenceURL) } rel="noopener">Read the original record</a>
+							</p>
+						} else {
+							<p class="panel__hint">No link to the original record was kept.</p>
+						}
+					</section>
+					<section class="panel" aria-labelledby="weather-heading">
+						<h2 id="weather-heading" class="panel__title">The weather that day</h2>
+						if hasWeather(s) {
+							<dl class="clues">
+								for _, c := range conditions(s) {
+									<div class="clue">
+										<dt>{ c.Label }</dt>
+										<dd>{ c.Value }</dd>
+									</div>
+								}
+							</dl>
+							<p class="panel__hint">The hour of the sighting, at its place, from Open-Meteo.</p>
+						} else {
+							<p class="panel__hint">No weather was recorded for this sighting.</p>
+						}
+					</section>
+					<section class="panel" aria-labelledby="sound-heading">
+						<h2 id="sound-heading" class="panel__title">Hear it</h2>
+						<!--
+							Where a recording exists it waits to be asked for: no autoplay, and
+							nothing fetched until play. Where none does, the page says so
+							rather than showing a player with nothing in it.
+						-->
+						if props.Recording != nil {
+							<div class="reveal__sound">
+								<audio controls preload="none" aria-label="Hear the animal">
+									<source src={ props.Recording.URL } type={ props.Recording.ContentType }/>
+								</audio>
+								<p class="reveal__sound-credit">{ RecordingCredit(*props.Recording) }</p>
+							</div>
+						} else {
+							<p class="panel__hint">No recording of this animal is available.</p>
+						}
+					</section>
+				</div>
+				<section class="entry__where" aria-labelledby="where-heading">
+					<h2 id="where-heading" class="panel__title">Where it was seen</h2>
+					if hasPosition(s.Location) {
+						<div class="map map--record" data-safari-map="safari-map" role="img" aria-label={ "Map of where this animal was seen: " + place(s.Location) }>
+							<p class="map__fallback">
+								<span>The map needs JavaScript and a connection. The position is listed under what was recorded.</span>
+							</p>
+						</div>
+						@templ.JSONScript("safari-map", recordMap(s))
+					} else {
+						<p class="entry__absent">This sighting has no position, so there is nowhere to put it on a map.</p>
+					}
+				</section>
+			</div>
+		</article>
+	}
+}

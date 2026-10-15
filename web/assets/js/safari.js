@@ -89,12 +89,23 @@
 			fillOpacity: 1,
 		});
 
-	if (data.mode === "answer") {
+	if (data.mode === "record") {
+		showRecord();
+	} else if (data.mode === "answer") {
 		showAnswer();
 	} else if (data.mode === "final") {
 		showFinal();
 	} else {
 		takeGuess();
+	}
+
+	// showRecord puts one sighting on the map. It is a place to look at and
+	// move about, not to answer on, so the map keeps all of its controls.
+	function showRecord() {
+		const here = L.latLng(data.answer.lat, data.answer.lng);
+
+		pin(here, moss).addTo(map).bindTooltip(label(data.answer.label), { permanent: true, direction: "top", offset: [0, -6] });
+		map.setView(here, 6);
 	}
 
 	// showAnswer draws the guess, the truth and the gap between them.

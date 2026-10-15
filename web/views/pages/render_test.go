@@ -908,3 +908,169 @@ func TestQuestion_KeepsTheBarShortOnASmallPhoneWithoutDroppingAReadout(t *testin
 	assert.Contains(t, clip[1], "clip-path", "clipped, not removed")
 	assert.NotContains(t, clip[1], "display: none", "display:none would drop it from the accessibility tree")
 }
+
+// renderRecord renders the page for s, with no recording.
+func renderRecord(t *testing.T, props pages.RecordProps) string {
+	t.Helper()
+
+	var buf bytes.Buffer
+	require.NoError(t, pages.Record(props).Render(context.Background(), &buf))
+	return buf.String()
+}
+
+// aFullSighting is a sighting with every field the record page can show.
+func aFullSighting() sighting.Sighting {
+	count := 3
+	return sighting.Sighting{
+		ID:              uuid.New(),
+		HappenedAt:      time.Date(2024, time.March, 9, 0, 0, 0, 0, time.UTC),
+		RecordedBy:      "Wanjiru Kamau",
+		IndividualCount: &count,
+		ReferenceURL:    "https://www.gbif.org/occurrence/42",
+		Location: sighting.Location{
+			Locality:    "Maasai Mara",
+			Country:     "Kenya",
+			Coordinates: sighting.Coordinates{Latitude: -1.4061, Longitude: 35.0117},
+		},
+		Species: species.Species{
+			ScientificName: "Panthera leo (Linnaeus, 1758)",
+			VernacularName: "lion",
+			Class:          "Mammalia",
+		},
+		Weather: weather.Weather{
+			ID:            uuid.New(),
+			Temperature:   weather.Temperature{Actual: 24, Apparent: 27},
+			Wind:          weather.Wind{Speed: 12, Gusts: 30, Direction: 225},
+			Condition:     weather.Condition{Code: 2},
+			CloudCover:    40,
+			Humidity:      65,
+			Precipitation: weather.Precipitation{Total: 0},
+		},
+		Media: []sighting.Media{{Type: "StillImage", URL: "https://inaturalist-open-data.s3.amazonaws.com/photos/1/original.jpg", Creator: "Sam Ndungu"}},
+	}
+}
+
+func TestRecord_ShowsEverythingTheRecordHolds(t *testing.T) {
+	t.Parallel()
+
+	html := renderRecord(t, pages.RecordProps{Sighting: aFullSighting()})
+
+	for _, want := range []string{
+		"Lion", "Panthera leo (Linnaeus, 1758)",
+		"Maasai Mara, Kenya", "9 March 2024", "Mammals", "3 together", "Wanjiru Kamau",
+		"-1.4061, 35.0117",
+		"Partly cloudy", "24°C, feels like 27°C", "12 km/h from the south-west, gusting 30", "40%", "65%",
+		"Sam Ndungu",
+		"/photos/1/large.jpg",
+		`href="https://www.gbif.org/occurrence/42"`,
+	} {
+		assert.Contains(t, html, want)
+	}
+
+	assert.Contains(t, html, "data-safari-map", "a sighting with a position is put on a map")
+	assert.Contains(t, html, "leaflet", "and Leaflet is loaded for it")
+	assert.Contains(t, html, "The map needs JavaScript", "the map says what to do without Leaflet")
+}
+
+func TestRecord_StatesEachAbsenceInWords(t *testing.T) {
+	t.Parallel()
+
+	s := sighting.Sighting{ID: uuid.New()}
+	html := renderRecord(t, pages.RecordProps{Sighting: s})
+
+	for _, want := range []string{
+		"Unknown species",
+		"No scientific name recorded",
+		"No photograph was kept for this sighting.",
+		"Location unknown",
+		"Date not recorded",
+		"Count not recorded",
+		"Observer not recorded",
+		"Not recorded", // the position
+		"This sighting has no position, so there is nowhere to put it on a map.",
+		"No weather was recorded for this sighting.",
+		"No recording of this animal is available.",
+		"No link to the original record was kept.",
+	} {
+		assert.Contains(t, html, want)
+	}
+
+	assert.NotContains(t, html, "data-safari-map", "nothing to put on a map")
+	assert.NotContains(t, html, "leaflet", "so Leaflet is not sent")
+	assert.NotContains(t, html, "<img", "no photograph, no broken image")
+	assert.NotContains(t, html, "<audio")
+	assert.NotRegexp(t, `<dd[^>]*>\s*</dd>`, html, "no row is left with nothing in it")
+}
+
+func TestRecord_PlaysTheRecordingWhenGivenOne(t *testing.T) {
+	t.Parallel()
+
+	roar := species.Recording{
+		URL:         "https://static.inaturalist.org/sounds/2160774.wav",
+		ContentType: "audio/x-wav",
+		Attribution: "(c) Africa Gomez, some rights reserved (CC BY-NC)",
+	}
+	html := renderRecord(t, pages.RecordProps{Sighting: aFullSighting(), Recording: &roar})
+
+	audio := regexp.MustCompile(`<audio[^>]*>`).FindString(html)
+	require.NotEmpty(t, audio)
+	assert.Contains(t, audio, "controls")
+	assert.Contains(t, audio, `preload="none"`, "nothing is fetched until someone presses play")
+	assert.NotContains(t, audio, "autoplay")
+	assert.Contains(t, html, `src="https://static.inaturalist.org/sounds/2160774.wav"`)
+	assert.Contains(t, html, "Africa Gomez", "credited beside it")
+	assert.NotContains(t, html, "No recording of this animal")
+}
+
+func TestRecord_CreditsAPhotographerWhoIsActuallyTheGenus(t *testing.T) {
+	t.Parallel()
+
+	s := aFullSighting()
+	s.Media[0].Creator = "Panthera"
+
+	assert.Contains(t, renderRecord(t, pages.RecordProps{Sighting: s}), "Photographer unrecorded")
+}
+
+// What contributors typed is theirs, not the page's.
+func TestRecord_DoesNotLetARecordSpeakInMarkup(t *testing.T) {
+	t.Parallel()
+
+	s := aFullSighting()
+	s.Remarks = `<script>alert(1)</script>`
+	s.RecordedBy = `<img src=x onerror=alert(1)>`
+	s.Location.Locality = `"><script>alert(2)</script>`
+	s.ReferenceURL = "javascript:alert(3)"
+
+	html := renderRecord(t, pages.RecordProps{Sighting: s})
+
+	assert.NotContains(t, html, "<script>alert")
+	assert.NotContains(t, html, "<img src=x")
+	assert.NotContains(t, html, `href="javascript:`)
+}
+
+func TestRecord_WindReadsAsWords(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name string
+		wind weather.Wind
+		want string
+	}{
+		{"still air", weather.Wind{Speed: 0.4, Direction: 90}, "Calm"},
+		{"a steady wind", weather.Wind{Speed: 10, Gusts: 12, Direction: 0}, "10 km/h from the north"},
+		{"a wind from a negative bearing", weather.Wind{Speed: 10, Gusts: 10, Direction: -90}, "from the west"},
+		{"a full circle", weather.Wind{Speed: 10, Gusts: 10, Direction: 360}, "from the north"},
+		{"a bearing just short of north", weather.Wind{Speed: 10, Gusts: 10, Direction: 350}, "from the north"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			s := aFullSighting()
+			s.Weather.Wind = tt.wind
+
+			assert.Contains(t, renderRecord(t, pages.RecordProps{Sighting: s}), tt.want)
+		})
+	}
+}
