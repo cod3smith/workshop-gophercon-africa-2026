@@ -28,6 +28,12 @@ templ Home(sightings []sighting.Sighting) {
 				<a class="button button--primary button--large" href="/play">Play { game.Name }</a>
 				<a class="button button--ghost button--large" href="#record">Browse the record</a>
 			</div>
+			<!-- The context a shared score skips: what the game is, in three steps. -->
+			<ol class="steps" aria-label="How it works">
+				<li>Look at the photograph. The species and place are withheld.</li>
+				<li>Drop a pin where you think it was taken.</li>
+				<li>Score by distance: the closer, the more, up to { thousands(game.MaxRoundScore) } a round over five rounds.</li>
+			</ol>
 			if summary.Sightings > 0 {
 				<dl class="figures">
 					<div class="figure">

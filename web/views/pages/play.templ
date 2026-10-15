@@ -15,7 +15,16 @@ templ Question(props QuestionProps) {
 		Map:         true,
 		Class:       "is-playing",
 	}) {
-		@scoreboard(props.Game, props.Game.Round+1)
+		@scoreboard(props.Game, props.Game.Round+1) {
+			<!--
+				The rules, once, beside the round label: it shares the scoreboard's
+				second row on a phone rather than adding a row of its own.
+			-->
+			<p class="rules">Five rounds. Closer pins score more, up to { thousands(game.MaxRoundScore) } a round.</p>
+		}
+		if props.Game.Round == 0 {
+			@welcome()
+		}
 		<!--
 			Source order is the order a phone shows: the photograph, then the map
 			you answer on, then the clues, so the evidence and the control sit
@@ -163,6 +172,27 @@ templ Question(props QuestionProps) {
 		</form>
 		@templ.JSONScript("safari-map", guessMap())
 	}
+}
+
+// welcome greets a player who has not yet answered anything. The game lives
+// in a signed cookie, so the first round is simply Round == 0: no flag to
+// store and nothing for script to decide.
+//
+// It is put away with a checkbox rather than script or a <details>: the
+// checkbox sits before the greeting, outside the guess form so it is never
+// submitted, and the stylesheet hides the greeting once it is checked. That
+// works with JavaScript off, and a keyboard can reach it. The greeting
+// comes back on reload, which on a first round is harmless.
+templ welcome() {
+	<input class="welcome__toggle visually-hidden" type="checkbox" id="welcome-dismiss"/>
+	<section class="welcome" aria-label="How to play">
+		<p class="welcome__text">
+			<strong>How to play.</strong>
+			Tap the map to drop a pin, aim the crosshair, or type a latitude and
+			longitude. The nearer you are, the more you score.
+		</p>
+		<label class="welcome__close button" for="welcome-dismiss">Got it</label>
+	</section>
 }
 
 // Answer is the round scored: how far out the guess was, and what the
@@ -330,5 +360,6 @@ templ scoreboard(g game.Game, round int) {
 			<span class="mono">{ thousands(g.Total()) }</span>
 			<span class="scoreboard__score-label">points</span>
 		</p>
+		{ children... }
 	</div>
 }

@@ -616,3 +616,99 @@ func TestOver_DoesNotToneTheRankByTheTotal(t *testing.T) {
 		assert.Contains(t, html, `rounds__row is-`, name+": the rounds keep theirs")
 	}
 }
+
+// renderQuestion renders the round a game is currently asking about.
+func renderQuestion(t *testing.T, g game.Game) string {
+	t.Helper()
+
+	s := sighting.Sighting{
+		ID:       uuid.New(),
+		Location: sighting.Location{Coordinates: sighting.Coordinates{Latitude: -1.29, Longitude: 36.82}},
+		Media:    []sighting.Media{{Type: "StillImage", URL: "https://example.org/animal.jpg"}},
+	}
+
+	var buf bytes.Buffer
+	require.NoError(t, pages.Question(pages.QuestionProps{Game: g, Sighting: s}).Render(context.Background(), &buf))
+	return buf.String()
+}
+
+// secondRound is a game one round in: the greeting has done its job.
+func secondRound() game.Game {
+	g := game.New([]uuid.UUID{uuid.New(), uuid.New(), uuid.New(), uuid.New(), uuid.New()})
+	g.Record(game.Result{DistanceKm: 900, Points: game.ScoreFor(900)})
+	return g
+}
+
+func TestQuestion_StatesTheRulesInPlainSightOnEveryRound(t *testing.T) {
+	t.Parallel()
+
+	for name, g := range map[string]game.Game{
+		"first round":  game.New([]uuid.UUID{uuid.New()}),
+		"second round": secondRound(),
+	} {
+		html := renderQuestion(t, g)
+
+		// Nothing else on the page says there are five rounds, that distance
+		// is what scores, or what a perfect round is worth.
+		rules := regexp.MustCompile(`(?s)<p[^>]*class="rules"[^>]*>(.*?)</p>`).FindStringSubmatch(html)
+		require.Len(t, rules, 2, "%s: the rules should be a visible line", name)
+		assert.Contains(t, rules[1], "Five rounds", name)
+		assert.Contains(t, rules[1], "5,000", name)
+		assert.Contains(t, strings.ToLower(rules[1]), "closer", name)
+
+		// A phone player has to be able to read it: clipped text is for
+		// screen readers only.
+		assert.NotRegexp(t, `<p[^>]*class="[^"]*visually-hidden[^"]*"[^>]*>[^<]*Five rounds`, html, name)
+	}
+}
+
+func TestQuestion_GreetsAFirstTimerOnRoundOneOnly(t *testing.T) {
+	t.Parallel()
+
+	first := renderQuestion(t, game.New([]uuid.UUID{uuid.New()}))
+
+	welcome := regexp.MustCompile(`(?s)<section[^>]*class="welcome"[^>]*>(.*?)</section>`).FindStringSubmatch(first)
+	require.Len(t, welcome, 2, "a fresh game should open with a greeting")
+
+	// The three ways to answer, and what scores.
+	for _, want := range []string{"Tap the map", "crosshair", "latitude and longitude", "nearer"} {
+		assert.Contains(t, welcome[1], want)
+	}
+
+	// It can be put away, and that has to work with no JavaScript: a hidden
+	// checkbox outside the guess form (so it is never submitted) that
+	// hides the greeting through CSS when it is checked.
+	assert.Regexp(t, `<input[^>]*type="checkbox"[^>]*id="welcome-dismiss"`, first)
+	assert.Contains(t, welcome[1], `for="welcome-dismiss"`)
+	assert.Less(t, strings.Index(first, `id="welcome-dismiss"`), strings.Index(first, `<form`), "the dismiss control must not be inside the guess form")
+
+	// It follows the rules line and precedes the form, so the photograph,
+	// the map and the clues keep the order Task 2 gave them.
+	assert.Less(t, strings.Index(first, `class="rules"`), strings.Index(first, `class="welcome"`))
+	assert.Less(t, strings.Index(first, `class="welcome"`), strings.Index(first, `<form`))
+
+	// From round two the game is already in the player's hands.
+	second := renderQuestion(t, secondRound())
+	assert.NotContains(t, second, `class="welcome"`)
+	assert.NotContains(t, second, "welcome-dismiss")
+	assert.Contains(t, second, `class="rules"`, "the rules line is for every round")
+}
+
+func TestHome_ExplainsHowTheGameWorksBeneathTheCall(t *testing.T) {
+	t.Parallel()
+
+	var buf bytes.Buffer
+	require.NoError(t, pages.Home(nil).Render(context.Background(), &buf))
+	html := buf.String()
+
+	// A shared score lands a stranger here or on a round; either way the
+	// game has to be explained in three steps.
+	steps := regexp.MustCompile(`(?s)<ol[^>]*class="steps"[^>]*>(.*?)</ol>`).FindStringSubmatch(html)
+	require.Len(t, steps, 2, "the home page should carry a how-it-works list")
+	assert.Equal(t, 3, strings.Count(steps[1], "<li"))
+	for _, want := range []string{"photograph", "pin", "distance", "5,000"} {
+		assert.Contains(t, steps[1], want)
+	}
+
+	assert.Less(t, strings.Index(html, `class="hero__actions"`), strings.Index(html, `class="steps"`), "the steps sit beneath the call to play")
+}

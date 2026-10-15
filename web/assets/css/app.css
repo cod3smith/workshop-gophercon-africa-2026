@@ -336,6 +336,35 @@ a:hover {
 	margin-top: 2.2rem;
 }
 
+/* How it works: three numbered steps, so a visitor who arrives from a
+   shared score has the game explained before they are asked to play it. */
+.steps {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+	gap: 1rem 1.5rem;
+	margin: 2.2rem 0 0;
+	padding: 0;
+	counter-reset: step;
+	list-style: none;
+}
+
+.steps li {
+	display: grid;
+	grid-template-columns: auto 1fr;
+	gap: 0 0.7rem;
+	color: var(--paper-dim);
+	font-size: 0.95rem;
+	counter-increment: step;
+}
+
+.steps li::before {
+	content: counter(step);
+	color: var(--gold-soft);
+	font-family: var(--mono);
+	font-size: 0.8rem;
+	line-height: 1.7;
+}
+
 .figures {
 	display: grid;
 	grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr));
@@ -542,6 +571,59 @@ a:hover {
 	font-weight: 400;
 	letter-spacing: 0.16em;
 	text-transform: uppercase;
+}
+
+/* --- The rules, and the greeting -------------------------------------- */
+
+/* One line, on every round, inside the scoreboard so it reads with the
+   round label. Wide, it takes its own row; on a phone it shares the score's
+   row (see the narrow-screens block) so it costs no height. */
+.scoreboard .rules {
+	flex: 1 1 100%;
+	margin: 0;
+	color: var(--paper-dim);
+	font-size: 0.85rem;
+}
+
+/* A first round only. Short on purpose: on a phone it shares the screen
+   with the photograph and the map, so it is a strip, not a page. */
+.welcome {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) auto;
+	gap: 0.3rem 0.8rem;
+	align-items: start;
+	margin-bottom: 1rem;
+	padding: 0.6rem 0.8rem;
+	border: 1px solid var(--gold);
+	border-radius: var(--radius);
+	background: var(--surface);
+}
+
+.welcome__text {
+	margin: 0;
+	font-size: 0.85rem;
+	line-height: 1.4;
+}
+
+.welcome__text strong {
+	color: var(--gold-soft);
+	font-weight: 600;
+}
+
+.welcome__close {
+	padding: 0.4rem 0.8rem;
+	font-size: 0.85rem;
+}
+
+/* The checkbox is the real control; the label is what a pointer hits. Put
+   away, the greeting is gone for the page, with no script. */
+.welcome__toggle:checked + .welcome {
+	display: none;
+}
+
+.welcome__toggle:focus-visible + .welcome .welcome__close {
+	outline: 2px solid var(--gold);
+	outline-offset: 3px;
 }
 
 /* --- A round ------------------------------------------------------------ */
@@ -1373,6 +1455,13 @@ a:hover {
 		gap: 0.4rem 0.8rem;
 		margin: 0.75rem 0;
 		padding-bottom: 0.6rem;
+	}
+
+	/* Beside the score, not under it: the second row had the room. */
+	.is-playing .scoreboard .rules {
+		flex: 1 1 11rem;
+		font-size: 0.78rem;
+		line-height: 1.35;
 	}
 
 	.is-playing .pip {
