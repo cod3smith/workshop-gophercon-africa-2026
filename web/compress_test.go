@@ -193,3 +193,30 @@ func TestCompress_WritesNothingForAHandlerThatWroteNothing(t *testing.T) {
 	assert.Empty(t, w.Body.Bytes(), "an empty handler must not produce a gzip header and trailer")
 	assert.Empty(t, sent(w).Get("Content-Encoding"))
 }
+
+func TestCompress_FlushPushesWhatIsBufferedToTheClient(t *testing.T) {
+	t.Parallel()
+
+	r := httptest.NewRequest(http.MethodGet, "/", nil)
+	r.Header.Set("Accept-Encoding", "gzip")
+	w := httptest.NewRecorder()
+
+	var buffered, flushed int
+	compress(http.HandlerFunc(func(rw http.ResponseWriter, _ *http.Request) {
+		rw.Header().Set("Content-Type", "text/html")
+		_, _ = io.WriteString(rw, strings.Repeat("<p>a sighting</p>", 200))
+		buffered = w.Body.Len()
+
+		// Asked for the way a handler asks: through net/http's own
+		// accessor, which must find the wrapper's Flush and not reach past
+		// it to the writer underneath, where the gzip buffer is not.
+		require.NoError(t, http.NewResponseController(rw).Flush())
+		flushed = w.Body.Len()
+	})).ServeHTTP(w, r)
+
+	// Only the gzip header has gone out; the three kilobytes of markup are
+	// still inside the writer's window, where a reader cannot reach them.
+	assert.Equal(t, 10, buffered, "the compressed bytes wait until something empties the writer")
+	assert.Greater(t, flushed, buffered, "a flush must put those bytes on the wire")
+	assert.Equal(t, strings.Repeat("<p>a sighting</p>", 200), body(t, w))
+}

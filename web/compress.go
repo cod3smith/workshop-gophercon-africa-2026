@@ -121,6 +121,15 @@ func (c *compressor) Flush() {
 	}
 }
 
+// Unwrap hands back the writer underneath, which is how net/http reaches
+// past a wrapper: http.ResponseController asks for it when it wants a
+// write deadline or a hijack. A flush does not come through here, because
+// the Flush above is found first, and it is the one that empties the gzip
+// writer before the connection.
+func (c *compressor) Unwrap() http.ResponseWriter {
+	return c.ResponseWriter
+}
+
 // decide works out whether this response is compressed, and if it is,
 // corrects the header to say so.
 func (c *compressor) decide(status int) {
