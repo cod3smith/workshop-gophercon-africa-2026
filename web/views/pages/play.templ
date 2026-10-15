@@ -27,13 +27,22 @@ templ Question(props QuestionProps) {
 			<!-- The clues follow the map in source order, after the submit button, so say so up front. -->
 			<p class="visually-hidden">The clues about this animal are listed after the map.</p>
 			<figure class="plate">
-				<img
-					class="plate__photo"
-					src={ PhotoURL(photo(props.Sighting), "large") }
-					width="1600"
-					height="900"
-					alt="An unidentified animal, photographed in the wild"
-				/>
+				<!-- A portrait photograph is letterboxed small in this box, so the plate opens it full size, with no script. -->
+				<a
+					class="plate__link"
+					href={ PhotoURL(photo(props.Sighting), "large") }
+					target="_blank"
+					rel="noopener"
+					aria-label="See the full photograph, opens in a new tab"
+				>
+					<img
+						class="plate__photo"
+						src={ PhotoURL(photo(props.Sighting), "large") }
+						width="1600"
+						height="900"
+						alt="An unidentified animal, photographed in the wild"
+					/>
+				</a>
 				<figcaption class="plate__credit">{ credit(photo(props.Sighting)) }</figcaption>
 			</figure>
 			<section class="guess" aria-label="Your guess">

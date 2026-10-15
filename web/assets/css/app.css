@@ -566,6 +566,17 @@ a:hover {
 	background: var(--surface);
 }
 
+/* The link fills the plate so the whole photograph is the target. Its focus
+   ring sits inside, because the plate clips anything that spills out. */
+.plate__link {
+	display: block;
+	height: 100%;
+}
+
+.plate__link:focus-visible {
+	outline-offset: -4px;
+}
+
 .plate__photo {
 	width: 100%;
 	height: 100%;

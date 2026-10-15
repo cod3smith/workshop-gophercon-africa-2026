@@ -185,3 +185,32 @@ func TestHome_ShipsMeasuredThumbnailsNotOriginals(t *testing.T) {
 	assert.Regexp(t, `width="\d+"`, img)
 	assert.Regexp(t, `height="\d+"`, img)
 }
+
+func TestQuestion_LetsThePhotographBeOpenedFullSize(t *testing.T) {
+	t.Parallel()
+
+	s := sighting.Sighting{
+		ID:    uuid.New(),
+		Media: []sighting.Media{{Type: "StillImage", URL: "https://inaturalist-open-data.s3.amazonaws.com/photos/1/original.jpeg"}},
+	}
+
+	var buf bytes.Buffer
+	err := pages.Question(pages.QuestionProps{Game: game.New([]uuid.UUID{s.ID}), Sighting: s}).Render(context.Background(), &buf)
+	require.NoError(t, err)
+	html := buf.String()
+
+	// A portrait photograph letterboxed into the phone's 16:9 plate is
+	// whole but small, so the plate has to open the full photograph with no
+	// script involved.
+	link := regexp.MustCompile(`<a[^>]*class="plate__link"[^>]*>`).FindString(html)
+	require.NotEmpty(t, link, "the photograph should be a link to itself")
+	assert.Contains(t, link, `href="https://inaturalist-open-data.s3.amazonaws.com/photos/1/large.jpeg"`)
+	assert.Contains(t, link, `target="_blank"`)
+	assert.Contains(t, link, `rel="noopener"`)
+	assert.Contains(t, link, `aria-label="See the full photograph`, "the link should say what it does, not just what the image shows")
+
+	// The link must wrap the image and sit ahead of the guess form's fields,
+	// so it adds one tab stop before the map rather than hiding the controls.
+	assert.Less(t, regexp.MustCompile(`class="plate__link"`).FindStringIndex(html)[0], regexp.MustCompile(`name="lat"`).FindStringIndex(html)[0])
+	assert.Regexp(t, `class="plate__link"[^>]*>\s*<img[^>]*class="plate__photo"`, html)
+}
