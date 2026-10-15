@@ -29,7 +29,9 @@ templ Question(props QuestionProps) {
 			<figure class="plate">
 				<img
 					class="plate__photo"
-					src={ photo(props.Sighting).URL }
+					src={ PhotoURL(photo(props.Sighting), "large") }
+					width="1600"
+					height="900"
 					alt="An unidentified animal, photographed in the wild"
 				/>
 				<figcaption class="plate__credit">{ credit(photo(props.Sighting)) }</figcaption>
@@ -167,7 +169,7 @@ templ Answer(props AnswerProps) {
 			</div>
 			<div class="reveal">
 				<figure class="reveal__plate">
-					<img src={ photo(props.Sighting).URL } alt={ speciesName(props.Sighting) }/>
+					<img src={ PhotoURL(photo(props.Sighting), "large") } width="1024" height="1024" alt={ speciesName(props.Sighting) }/>
 					<figcaption>{ credit(photo(props.Sighting)) }</figcaption>
 				</figure>
 				<div class="reveal__body">

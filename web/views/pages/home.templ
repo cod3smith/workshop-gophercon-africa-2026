@@ -71,7 +71,7 @@ templ Home(sightings []sighting.Sighting) {
 							<article>
 								{{ image := photo(s) }}
 								if image.URL != "" {
-									<img class="tile__photo" src={ image.URL } alt={ speciesName(s) } loading="lazy"/>
+									<img class="tile__photo" src={ PhotoURL(image, "medium") } width="500" height="375" alt={ speciesName(s) } loading="lazy"/>
 								} else {
 									<div class="tile__photo tile__photo--none" aria-hidden="true"></div>
 								}

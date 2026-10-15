@@ -3,7 +3,9 @@ package pages
 import (
 	"fmt"
 	"math"
+	"path"
 	"strconv"
+	"strings"
 	"unicode"
 	"uuid"
 	"workshop/internal/domain/game"
@@ -75,6 +77,25 @@ func answerMap(props AnswerProps) MapData {
 func photo(s sighting.Sighting) sighting.Media {
 	media, _ := game.Photo(s)
 	return media
+}
+
+// originalName is the file iNaturalist keeps the uploaded photograph under,
+// before its extension. It keeps scaled copies beside it, named by size.
+const originalName = "original"
+
+// PhotoURL is the photograph at the given size ("medium", "large"), for a
+// page that has no use for a 2048-pixel original.
+//
+// Only iNaturalist keeps sized copies, so a URL whose final path segment is
+// not "original.<ext>" is returned as it was: guessing at another host's
+// layout would hand the page a broken image.
+func PhotoURL(m sighting.Media, size string) string {
+	dir, file := path.Split(m.URL)
+	extension, ok := strings.CutPrefix(file, originalName+".")
+	if !ok {
+		return m.URL
+	}
+	return dir + size + "." + extension
 }
 
 // credit names whoever took the photograph, which their licence asks for.

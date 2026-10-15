@@ -571,7 +571,12 @@ a:hover {
 	height: 100%;
 	min-height: 22rem;
 	max-height: 70vh;
-	object-fit: cover;
+	/* Contain, not cover: the horizon, the sky and the vegetation at the
+	   frame's edge are what the player reads a place from, so cropping them
+	   would score the player on evidence the page had hidden. The well shows
+	   where the photograph does not reach. */
+	object-fit: contain;
+	background: var(--sunken);
 }
 
 .plate__credit {

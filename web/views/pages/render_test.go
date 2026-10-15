@@ -89,3 +89,99 @@ func TestQuestion_KeepsTheTypedRouteDescribedAndTheCluesAnnounced(t *testing.T) 
 	assert.Contains(t, html, told)
 	assert.Less(t, bytes.Index([]byte(html), []byte(told)), bytes.Index([]byte(html), []byte(`id="guess-submit"`)))
 }
+
+func TestPhotoURL(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name string
+		url  string
+		size string
+		want string
+	}{
+		{
+			name: "an iNaturalist original is swapped for the requested size",
+			url:  "https://inaturalist-open-data.s3.amazonaws.com/photos/1/original.jpeg",
+			size: "medium",
+			want: "https://inaturalist-open-data.s3.amazonaws.com/photos/1/medium.jpeg",
+		},
+		{
+			name: "the extension is kept, whatever it is",
+			url:  "https://inaturalist-open-data.s3.amazonaws.com/photos/2/original.png",
+			size: "large",
+			want: "https://inaturalist-open-data.s3.amazonaws.com/photos/2/large.png",
+		},
+		{
+			name: "a host with no original segment is left untouched",
+			url:  "https://observation.org/photos/9.jpg",
+			size: "medium",
+			want: "https://observation.org/photos/9.jpg",
+		},
+		{
+			name: "an original that is not the final segment is left untouched",
+			url:  "https://example.org/original.photos/9.jpg",
+			size: "medium",
+			want: "https://example.org/original.photos/9.jpg",
+		},
+		{
+			name: "no media gives no URL",
+			url:  "",
+			size: "medium",
+			want: "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			assert.Equal(t, tt.want, pages.PhotoURL(sighting.Media{URL: tt.url}, tt.size))
+		})
+	}
+}
+
+func TestQuestion_AsksForAMeasuredPhotograph(t *testing.T) {
+	t.Parallel()
+
+	s := sighting.Sighting{
+		ID:    uuid.New(),
+		Media: []sighting.Media{{Type: "StillImage", URL: "https://inaturalist-open-data.s3.amazonaws.com/photos/1/original.jpeg"}},
+	}
+
+	var buf bytes.Buffer
+	err := pages.Question(pages.QuestionProps{Game: game.New([]uuid.UUID{s.ID}), Sighting: s}).Render(context.Background(), &buf)
+	require.NoError(t, err)
+	html := buf.String()
+
+	// The plate is the one image the player is scored on reading, so it
+	// asks for a size fit to look at rather than the original, and says how
+	// big it is so the page does not jump when it lands.
+	img := regexp.MustCompile(`<img[^>]*class="plate__photo"[^>]*>`).FindString(html)
+	require.NotEmpty(t, img)
+	assert.Contains(t, img, `src="https://inaturalist-open-data.s3.amazonaws.com/photos/1/large.jpeg"`)
+	assert.Regexp(t, `width="\d+"`, img)
+	assert.Regexp(t, `height="\d+"`, img)
+}
+
+func TestHome_ShipsMeasuredThumbnailsNotOriginals(t *testing.T) {
+	t.Parallel()
+
+	s := sighting.Sighting{
+		ID:    uuid.New(),
+		Media: []sighting.Media{{Type: "StillImage", URL: "https://inaturalist-open-data.s3.amazonaws.com/photos/1/original.jpeg"}},
+	}
+
+	var buf bytes.Buffer
+	err := pages.Home([]sighting.Sighting{s}).Render(context.Background(), &buf)
+	require.NoError(t, err)
+	html := buf.String()
+
+	// Sixty originals on one page stall conference wifi, and without
+	// dimensions each one shoves the page down as it lands.
+	img := regexp.MustCompile(`<img[^>]*class="tile__photo"[^>]*>`).FindString(html)
+	require.NotEmpty(t, img)
+	assert.Contains(t, img, `src="https://inaturalist-open-data.s3.amazonaws.com/photos/1/medium.jpeg"`)
+	assert.NotContains(t, html, "original.jpeg")
+	assert.Regexp(t, `width="\d+"`, img)
+	assert.Regexp(t, `height="\d+"`, img)
+}
