@@ -18,8 +18,6 @@ templ Question(props QuestionProps) {
 		@scoreboard(props.Game, props.Game.Round+1)
 		<form class="round" method="post" action="/play/guess">
 			<input type="hidden" name="round" value={ strconv.Itoa(props.Game.Round) }/>
-			<input type="hidden" name="lat" id="lat" value=""/>
-			<input type="hidden" name="lng" id="lng" value=""/>
 			<figure class="plate">
 				<img
 					class="plate__photo"
@@ -41,7 +39,8 @@ templ Question(props QuestionProps) {
 				<p class="panel__hint" id="map-help">
 					Click the map to drop a pin where you think it was recorded. Or
 					focus the map, pan with the arrow keys, and press Enter to place
-					one at the crosshair. The closer you are, the more it scores.
+					one at the crosshair. Or type a latitude and longitude under the
+					map. The closer you are, the more it scores.
 				</p>
 			</section>
 			<section class="guess" aria-label="Your guess">
@@ -54,8 +53,12 @@ templ Question(props QuestionProps) {
 						aria-describedby="map-help"
 					>
 						<p class="map__fallback">
-							The map needs JavaScript and a connection. Without it you can
-							still read every sighting on <a href="/">the record</a>.
+							<!-- One child, so the grid centres the sentence rather than splitting it around the link. -->
+							<span>
+								The map needs JavaScript and a connection. Without it, type a
+								latitude and longitude below, or read every sighting on
+								<a href="/">the record</a>.
+							</span>
 						</p>
 					</div>
 					<!-- Revealed by safari.js: it only means anything once the map is live. -->
@@ -67,13 +70,55 @@ templ Question(props QuestionProps) {
 						</svg>
 					</div>
 				</div>
+				<!--
+					A guess does not need the map: a screen reader cannot aim a
+					crosshair, and a blocked CDN leaves no map to click. These are
+					the form's real fields, and the map only fills them in.
+				-->
+				<div class="coords">
+					<div class="coords__field">
+						<label for="lat">Latitude</label>
+						<input
+							type="number"
+							step="any"
+							min="-90"
+							max="90"
+							name="lat"
+							id="lat"
+							required
+							inputmode="decimal"
+							autocomplete="off"
+							aria-describedby="coords-help"
+						/>
+					</div>
+					<div class="coords__field">
+						<label for="lng">Longitude</label>
+						<input
+							type="number"
+							step="any"
+							min="-180"
+							max="180"
+							name="lng"
+							id="lng"
+							required
+							inputmode="decimal"
+							autocomplete="off"
+							aria-describedby="coords-help"
+						/>
+					</div>
+					<p class="coords__help" id="coords-help">
+						Latitude runs from -90 (south) to 90 (north), longitude from -180 (west) to 180 (east).
+					</p>
+				</div>
 				<div class="guess__bar">
+					<!-- Revealed by safari.js: there is no crosshair to read until the map is live. -->
+					<p class="field__readout" id="crosshair-readout" aria-live="polite" hidden></p>
 					<output class="field__readout" id="guess-readout" for="lat lng">No pin dropped yet</output>
 					<!-- type="button": this sits inside the guess form and must not submit it. -->
 					<button class="button" type="button" data-drop-centre hidden>
 						Place pin at crosshair
 					</button>
-					<button class="button button--primary button--large" type="submit" id="guess-submit" disabled>
+					<button class="button button--primary button--large" type="submit" id="guess-submit">
 						Lock it in
 					</button>
 				</div>

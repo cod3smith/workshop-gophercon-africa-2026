@@ -2,8 +2,37 @@
 // guess and the answer side by side once the round has been scored.
 //
 // The map is an extra. Without it — or without Leaflet from the CDN — the
-// page still says what it needs to, and every sighting is still readable
-// on the record.
+// page still says what it needs to, a guess can still be typed into the
+// latitude and longitude fields, and every sighting is still readable on
+// the record.
+
+// Keeps the submit button honest about the two coordinate fields. It runs
+// whether or not the map does, because typing is the way in that cannot
+// depend on Leaflet loading.
+//
+// The button ships enabled so a page with no JavaScript can still submit;
+// this is what turns it off while the fields can't be a guess. The browser
+// does the judging (required, min, max and unparseable input all count as
+// invalid), so there is no second set of rules here to drift from the markup.
+(() => {
+	"use strict";
+
+	const lat = document.getElementById("lat");
+	const lng = document.getElementById("lng");
+	const submit = document.getElementById("guess-submit");
+	if (!lat || !lng || !submit) {
+		return;
+	}
+
+	const sync = () => {
+		submit.disabled = !(lat.checkValidity() && lng.checkValidity());
+	};
+
+	lat.addEventListener("input", sync);
+	lng.addEventListener("input", sync);
+	sync();
+})();
+
 (() => {
 	"use strict";
 
@@ -89,12 +118,13 @@
 	// There are three ways in, because a map that only answers to a click
 	// is a map only a mouse can play: click it, press Enter on it, or use
 	// the button under it. The last two place the pin at the crosshair in
-	// the middle, which the arrow keys move by panning the map.
+	// the middle, which the arrow keys move by panning the map. Typing the
+	// coordinates works too, and moves the pin to match.
 	function takeGuess() {
 		const lat = document.getElementById("lat");
 		const lng = document.getElementById("lng");
-		const submit = document.getElementById("guess-submit");
 		const readout = document.getElementById("guess-readout");
+		const crosshairReadout = document.getElementById("crosshair-readout");
 		const frame = box.closest(".mapframe");
 		const crosshair = frame && frame.querySelector("[data-crosshair]");
 		const centre = document.querySelector("[data-drop-centre]");
@@ -110,7 +140,60 @@
 			centre.hidden = false;
 		}
 
+		// The crosshair is only worth reading out once there is a map to aim
+		// it with.
+		const announceCrosshair = () => {
+			if (!crosshairReadout) {
+				return;
+			}
+
+			const point = map.getCenter().wrap();
+			crosshairReadout.textContent = `Crosshair at ${point.lat.toFixed(3)}, ${point.lng.toFixed(3)}`;
+		};
+
+		if (crosshairReadout) {
+			crosshairReadout.hidden = false;
+			announceCrosshair();
+		}
+
+		// Panning fires moveend each time the map settles, and a screen
+		// reader that is told about every one talks over itself. So the
+		// readout is rewritten at most once every 400ms, and the update
+		// always reads the centre as it is when it runs, which keeps the
+		// last word accurate.
+		const announceEvery = 400;
+		let announceTimer = null;
+		let announcedAt = 0;
+
+		map.on("moveend", () => {
+			if (announceTimer !== null) {
+				return;
+			}
+
+			const wait = Math.max(0, announceEvery - (Date.now() - announcedAt));
+			announceTimer = setTimeout(() => {
+				announceTimer = null;
+				announcedAt = Date.now();
+				announceCrosshair();
+			}, wait);
+		});
+
 		let marker = null;
+
+		// show draws the pin and says where it is, without touching the
+		// form: it is what both a click and a typed guess end in.
+		const show = (point) => {
+			if (marker === null) {
+				marker = pin(point, gold).addTo(map);
+			} else {
+				marker.setLatLng(point);
+			}
+
+			// <output> is a live region, so this is also what a screen reader
+			// hears the moment the pin lands.
+			readout.textContent = `Pin at ${point.lat.toFixed(3)}, ${point.lng.toFixed(3)}`;
+			readout.dataset.set = "true";
+		};
 
 		// place puts the pin down and tells the form where it went.
 		const place = (latlng) => {
@@ -119,21 +202,27 @@
 			// is concerned, so it's wrapped before it goes anywhere.
 			const point = latlng.wrap();
 
-			if (marker === null) {
-				marker = pin(point, gold).addTo(map);
-			} else {
-				marker.setLatLng(point);
-			}
-
 			lat.value = point.lat.toFixed(5);
 			lng.value = point.lng.toFixed(5);
+			// Setting a value from script fires nothing, and the submit
+			// button listens for typing.
+			lat.dispatchEvent(new Event("input"));
+			lng.dispatchEvent(new Event("input"));
 
-			submit.disabled = false;
-			// <output> is a live region, so this is also what a screen reader
-			// hears the moment the pin lands.
-			readout.textContent = `Pin at ${point.lat.toFixed(3)}, ${point.lng.toFixed(3)}`;
-			readout.dataset.set = "true";
+			show(point);
 		};
+
+		// A typed guess moves the pin, so the map and the fields never
+		// disagree about where the guess is. "change" rather than "input":
+		// a half-typed "-1." should not send the pin somewhere.
+		const follow = () => {
+			if (lat.checkValidity() && lng.checkValidity()) {
+				show(L.latLng(Number(lat.value), Number(lng.value)));
+			}
+		};
+
+		lat.addEventListener("change", follow);
+		lng.addEventListener("change", follow);
 
 		map.on("click", (event) => place(event.latlng));
 

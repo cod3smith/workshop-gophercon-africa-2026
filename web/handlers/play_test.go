@@ -191,14 +191,17 @@ func TestGuess(t *testing.T) {
 		assert.Len(t, g.Results, 1, "the round must not be scored twice")
 	})
 
-	t.Run("Refuses a position that is nowhere on earth", func(t *testing.T) {
+	t.Run("Returns the player to their round when the guess is not a position", func(t *testing.T) {
 		t.Parallel()
 
 		session, games := handlers.NewSession(), gameOf()
 		cookie := begin(t, session, games)
 
+		// A typed guess can be anything, so a bad one has to land the player
+		// back on their round rather than on a dead-end error page.
 		for name, pos := range map[string][2]string{
-			"Not a number":        {"NaN", "NaN"},
+			"Not a number":        {"not-a-number", "36.82"},
+			"NaN":                 {"NaN", "NaN"},
 			"Latitude off world":  {"999", "0"},
 			"Longitude off world": {"0", "999"},
 			"Infinite":            {"Inf", "0"},
@@ -206,7 +209,10 @@ func TestGuess(t *testing.T) {
 		} {
 			t.Run(name, func(t *testing.T) {
 				rec := guess(t, session, games, cookie, "0", pos[0], pos[1])
-				assert.Equal(t, http.StatusBadRequest, rec.Code)
+
+				assert.Equal(t, http.StatusSeeOther, rec.Code)
+				assert.Equal(t, "/play", rec.Header().Get("Location"))
+				assert.Empty(t, rec.Result().Cookies(), "the round is unscored, so the game must be left as it was")
 			})
 		}
 	})

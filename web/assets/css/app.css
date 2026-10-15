@@ -50,6 +50,13 @@
 	box-sizing: border-box;
 }
 
+/* Classes below set display, which beats the browser's own rule for the
+   hidden attribute. Without this the crosshair and its button would show
+   on a page where the map never loaded, aiming at nothing. */
+[hidden] {
+	display: none !important;
+}
+
 html {
 	scroll-behavior: smooth;
 }
@@ -629,6 +636,50 @@ a:hover {
 .guess .map {
 	aspect-ratio: 21 / 9;
 	min-height: 24rem;
+}
+
+/* The typed way to answer, which is the only way when the map is down. */
+.coords {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 0.6rem 0.9rem;
+	padding: 0.9rem;
+	border: 1px solid var(--edge);
+	border-radius: var(--radius);
+	background: var(--surface);
+}
+
+.coords__field {
+	display: flex;
+	flex-direction: column;
+	gap: 0.4rem;
+}
+
+.coords label {
+	color: var(--paper-dim);
+	font-family: var(--mono);
+	font-size: 0.72rem;
+	letter-spacing: 0.14em;
+	text-transform: uppercase;
+}
+
+.coords input {
+	width: 100%;
+	padding: 0.6rem 0.8rem;
+	border: 1px solid var(--edge);
+	border-radius: var(--radius);
+	background: var(--ink);
+	color: var(--paper);
+	font-family: var(--mono);
+	/* 16px, so iOS does not zoom the page when the field takes focus. */
+	font-size: 1rem;
+}
+
+.coords__help {
+	grid-column: 1 / -1;
+	margin: 0;
+	color: var(--paper-dim);
+	font-size: 0.82rem;
 }
 
 .guess__bar {

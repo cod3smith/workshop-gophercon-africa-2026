@@ -108,7 +108,10 @@ func Guess(logger *slog.Logger, games GameService, session Session) http.Handler
 
 		guess, err := coordinates(r.PostFormValue("lat"), r.PostFormValue("lng"))
 		if err != nil {
-			renderError(ctx, w, logger, http.StatusBadRequest, "That guess isn't anywhere on earth.")
+			// The fields can be typed into, so this is a slip a person makes
+			// rather than a request nobody should send. The round is unscored
+			// and the cookie untouched, so back to it they go with their game.
+			http.Redirect(w, r, "/play", http.StatusSeeOther)
 			return
 		}
 
