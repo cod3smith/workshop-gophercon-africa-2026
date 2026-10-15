@@ -407,3 +407,136 @@ git add -A && git commit -m "refactor: clear the polish the critique listed"
 - **Review Focus coverage:** item 1 → Task 3 Step 1; items 2–4 → Task 4 Steps 1 and 4; item 5 → Task 1 Step 6.
 - **Type consistency:** `PhotoURL`, `Taxon`, `Credit` and `ToneFor` are exported because the tests live in `pages_test`; the plan uses those exact names throughout. `Share` takes a `url string` in Tasks 5 and nowhere earlier.
 - **Known cost:** Task 6 deletes `components.SightingCard`, which the workshop's `/design-site` skill references in its block documentation. That is acceptable in a fork, but worth a line in the commit message.
+
+---
+
+## Addendum — tasks added from the re-critique (29/40)
+
+The first critique's P0 and P1s are closed. A second critique at `c9c4dc9` scored
+29/40 and found that the two remaining P1s are about **order**, not correctness:
+the answer screen and the ending both bury their best moment below the fold. It
+also found that the P0 fix cost a point on minimalism, which is recoverable. The
+owner chose to do these plus Task 6, then re-critique.
+
+### Task 7: Lead with the reward
+
+**Files:**
+- Modify: `web/views/pages/play.templ` (the `Answer` and `Over` views)
+- Modify: `web/assets/css/app.css`
+- Test: `web/views/pages/render_test.go`
+
+**Interfaces:**
+- Consumes: `game.Game.Best()`, `pages.PhotoURL` from Tasks 3 and 5.
+- Produces: nothing later tasks rely on.
+
+- [ ] **Step 1: Write the failing order tests**
+
+In `render_test.go`, assert position rather than mere presence — these are
+ordering defects, so only order catches a regression:
+
+```go
+// Answer: the species name precedes the map, and "Next round" is reachable.
+assert.Less(t, strings.Index(html, speciesName), strings.Index(html, `class="map`))
+// Over: the share block and Play again precede the rounds list.
+assert.Less(t, strings.Index(html, `class="share`), strings.Index(html, `class="rounds`))
+```
+
+- [ ] **Step 2: Run them and watch them fail**
+
+Run: `go test ./web/views/pages/ -v`
+Expected: FAIL — the reveal currently follows the map, and the share follows the rounds.
+
+- [ ] **Step 3: Lead the answer screen with the reveal**
+
+Move the species name, binomial and a small photo (`PhotoURL(..., "medium")`)
+into or directly beneath `.result__head`, above the map. Measured before: species
+at y=949 and "Next round" at y=1287 on an 812px phone. Target: the species name
+on the first screen.
+
+- [ ] **Step 4: Make "Next round" sticky**
+
+Give the answer screen a sticky action bar matching `.guess__bar`'s structure and
+tokens, so the next step is never hunted for. Respect the `max-height: 30rem`
+landscape rule that makes `.guess__bar` static.
+
+- [ ] **Step 5: Reorder the ending**
+
+Order the Over view: score, rank, best line, **share and Play again**, then the
+rounds list and the map. Retitle the share block from "Brag about it" to
+something that fits a 955/25,000 run — the product's voice is dry and
+affectionate, not boastful.
+
+- [ ] **Step 6: Stop painting a weak rank in alarm**
+
+`gameTone` currently gives a low total `is-far`, so the rank renders in `--clay`.
+Leave the per-round rows toned, but render the rank itself in `--paper` regardless
+of total.
+
+- [ ] **Step 7: Run the tests and play a full game**
+
+Run: `go tool templ generate ./web/... && go test ./... 2>&1 | grep -E "FAIL|^---"`
+Expected: no output. Then play five rounds and measure the species name's and the
+share block's positions at 375×812.
+
+- [ ] **Step 8: Commit**
+
+```bash
+git add web/ && git commit -m "fix: lead with the animal, and let the ending be shared"
+```
+
+### Task 8: Collapse the fallback when the map works
+
+**Files:**
+- Modify: `web/views/pages/play.templ` (the `Question` view's `.coords` block)
+- Modify: `web/assets/js/safari.js`
+- Modify: `web/assets/css/app.css`
+- Test: `web/views/pages/render_test.go`
+
+**Interfaces:**
+- Consumes: the `.coords` block and `#crosshair-readout` from Tasks 1 and 2.
+- Produces: nothing.
+
+- [ ] **Step 1: Write the failing test**
+
+The no-JavaScript guarantee is that the fallback ships **open**. Assert the
+rendered markup contains a `<details open>` wrapping the coordinate inputs:
+
+```go
+assert.Contains(t, html, "<details")
+assert.Regexp(t, `<details[^>]*\sopen`, html)   // open in the markup, closed by JS
+```
+
+- [ ] **Step 2: Run it and watch it fail**
+
+Run: `go test ./web/views/pages/ -v`
+Expected: FAIL — the coordinates are an always-visible block.
+
+- [ ] **Step 3: Wrap the coordinates in a `<details open>`**
+
+Summary text names the route ("Enter coordinates instead"). It ships open so a
+visitor with no JavaScript, or a blocked Leaflet, sees the fields immediately.
+
+- [ ] **Step 4: Close it once Leaflet is live**
+
+In `safari.js`'s `takeGuess`, after the map is confirmed, remove the `open`
+attribute. The fallback is then one click away rather than permanently occupying
+the screen. Do not hide it — closing a `<details>` keeps it in the accessibility
+tree and keyboard-reachable.
+
+- [ ] **Step 5: Restyle the readouts as status, not fields**
+
+`.field__readout` currently shares the border and fill of a real `<input>`, so a
+status line reads as something you can type into. Render both readouts as plain
+text in `--paper-dim` with no border or box.
+
+- [ ] **Step 6: Verify both paths**
+
+Run `go tool templ generate ./web/... && go test ./web/views/pages/ -v`. Then load
+`/play` with Leaflet reachable (the details should be closed) and with it blocked
+(it should be open and usable), and confirm a round can still be scored by typing.
+
+- [ ] **Step 7: Commit**
+
+```bash
+git add web/ && git commit -m "refactor: offer the typed route without it crowding the map"
+```
