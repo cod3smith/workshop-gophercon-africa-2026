@@ -2,6 +2,7 @@ package species
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"sync"
 	"time"
@@ -44,6 +45,10 @@ const (
 	// the next one, so this is not the page's deadline. iNaturalist takes
 	// several seconds, which is far longer than a reveal can wait.
 	SoundLookupTimeout = 20 * time.Second
+	// SoundLookups is how many lookups may be out at once. The source is
+	// rate limited and a room of players each reveals a different animal,
+	// so the rest wait their turn rather than going out together.
+	SoundLookups = 2
 )
 
 // Sounds finds the recording of a species, if there is one, and remembers
@@ -67,6 +72,11 @@ type Sounds struct {
 	mu       sync.Mutex
 	remember map[string]soundAnswer
 	flying   map[string]*soundFlight
+
+	// permits is a semaphore over the lookups in flight. It is taken by the
+	// lookup, on its own goroutine, and never by a caller: callers are on
+	// the request path and must not wait for it.
+	permits chan struct{}
 }
 
 // soundAnswer is one remembered lookup.
@@ -101,6 +111,7 @@ func NewSounds(logger *slog.Logger, source SoundSource, opts ...SoundOption) *So
 		now:      time.Now,
 		remember: map[string]soundAnswer{},
 		flying:   map[string]*soundFlight{},
+		permits:  make(chan struct{}, SoundLookups),
 	}
 	for _, opt := range opts {
 		opt(s)
@@ -167,30 +178,59 @@ func (s *Sounds) begin(ctx context.Context, name string) *soundFlight {
 	return flight
 }
 
-// fetch asks the source and keeps what it says.
+// fetch asks the source and keeps what it says. However it ends, the
+// lookup is settled: the species stops being under way and whoever is
+// waiting on it is released.
+//
+// It runs on a goroutine of its own, out of reach of the server's
+// per-request recovery, so a panic is caught here: left alone it would end
+// the process and every player's game with it.
 func (s *Sounds) fetch(ctx context.Context, name string, flight *soundFlight) {
+	answer, ttl := soundAnswer{}, SoundFailureTTL
+
+	defer func() {
+		if r := recover(); r != nil {
+			s.warn(ctx, fmt.Sprintf("species: looking for a recording of %s panicked: %v", name, r))
+			answer, ttl = soundAnswer{}, SoundFailureTTL
+		}
+		s.settle(name, flight, answer, ttl)
+	}()
+
+	// Wait for a permit before the clock on the lookup starts, so queueing
+	// does not eat the time the source is given. The lookup is already
+	// registered as flying, so anyone asking meanwhile joins it.
+	s.permits <- struct{}{}
+	defer func() { <-s.permits }()
+
 	ctx, cancel := context.WithTimeout(ctx, SoundLookupTimeout)
 	defer cancel()
-
-	answer, ttl := soundAnswer{}, SoundTTL
 
 	recording, found, err := s.source.Sound(ctx, name)
 	if err != nil {
 		// A failure says nothing about whether a recording exists, so it is
 		// not remembered as a day of silence; but it is not retried on
 		// every view either, as a source that is struggling stays so.
-		s.logger.WarnContext(ctx, "species: looking for a recording of "+name+": "+err.Error())
-		ttl = SoundFailureTTL
-	} else {
-		answer = soundAnswer{recording: recording, found: found}
+		s.warn(ctx, "species: looking for a recording of "+name+": "+err.Error())
+		return
 	}
-	answer.expires = s.now().Add(ttl)
 
+	answer, ttl = soundAnswer{recording: recording, found: found}, SoundTTL
+}
+
+// settle keeps the answer, ends the lookup and releases those waiting on it.
+func (s *Sounds) settle(name string, flight *soundFlight, answer soundAnswer, ttl time.Duration) {
 	s.mu.Lock()
+	answer.expires = s.now().Add(ttl)
 	s.remember[name] = answer
 	delete(s.flying, name)
 	s.mu.Unlock()
 
 	flight.answer = answer
 	close(flight.done)
+}
+
+func (s *Sounds) warn(ctx context.Context, msg string) {
+	if s.logger != nil {
+		s.logger.WarnContext(ctx, msg)
+	}
 }

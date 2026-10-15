@@ -5,6 +5,8 @@ import (
 	"errors"
 	"io"
 	"log/slog"
+	"maps"
+	"strconv"
 	"sync"
 	"testing"
 	"time"
@@ -298,4 +300,193 @@ func TestSounds_WarmingTheWarmIsFree(t *testing.T) {
 	sounds.Warm(t.Context(), "")
 
 	assert.Equal(t, 1, stub.asked("Acinonyx jubatus"))
+}
+
+// counting is a source that holds every lookup until released and records
+// how many are under way at once.
+type counting struct {
+	release chan struct{}
+	started chan string
+
+	mu      sync.Mutex
+	running int
+	peak    int
+	calls   map[string]int
+}
+
+func newCounting() *counting {
+	return &counting{release: make(chan struct{}), started: make(chan string, 32), calls: map[string]int{}}
+}
+
+func (c *counting) Sound(ctx context.Context, name string) (species.Recording, bool, error) {
+	c.mu.Lock()
+	c.running++
+	c.peak = max(c.peak, c.running)
+	c.calls[name]++
+	c.mu.Unlock()
+	c.started <- name
+
+	defer func() {
+		c.mu.Lock()
+		c.running--
+		c.mu.Unlock()
+	}()
+
+	select {
+	case <-c.release:
+		return lionRoar, true, nil
+	case <-ctx.Done():
+		return species.Recording{}, false, ctx.Err()
+	}
+}
+
+func (c *counting) stats() (peak int, calls map[string]int) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.peak, maps.Clone(c.calls)
+}
+
+// Twenty-five players on one network, each with a different animal, are
+// twenty-five lookups; the service they ask is rate limited, so only a few
+// are let out at once and the rest wait their turn.
+func TestSounds_OnlyAFewLookupsRunAtOnce(t *testing.T) {
+	t.Parallel()
+
+	src := newCounting()
+	sounds := species.NewSounds(quietLogger(), src)
+
+	names := make([]string, 12)
+	for i := range names {
+		names[i] = "Species " + strconv.Itoa(i)
+	}
+
+	begun := make(chan struct{})
+	go func() {
+		defer close(begun)
+		for _, name := range names {
+			sounds.Warm(t.Context(), name)
+		}
+	}()
+	select {
+	case <-begun:
+	case <-time.After(2 * time.Second):
+		t.Fatal("Warm waited for a permit; it runs on the request path and must not block")
+	}
+
+	for range species.SoundLookups {
+		<-src.started
+	}
+	time.Sleep(50 * time.Millisecond)
+	got, _ := src.stats()
+	assert.Equal(t, species.SoundLookups, got, "no more than the permits are out at once")
+
+	close(src.release)
+	for _, name := range names {
+		require.Eventually(t, func() bool {
+			_, ok := sounds.Sound(t.Context(), name)
+			return ok
+		}, 5*time.Second, 5*time.Millisecond, name+" is looked up in the end")
+	}
+
+	got, calls := src.stats()
+	assert.LessOrEqual(t, got, species.SoundLookups)
+	for _, name := range names {
+		assert.Equal(t, 1, calls[name], name+" is looked up once")
+	}
+}
+
+// A lookup waiting for its turn is still a lookup under way: callers for
+// the same species join it rather than queueing a second, and the wait does
+// not come out of the time the source is given.
+func TestSounds_AQueuedLookupIsStillSharedAndKeepsItsTimeBudget(t *testing.T) {
+	t.Parallel()
+
+	src := newCounting()
+	sounds := species.NewSounds(quietLogger(), src)
+
+	for i := range species.SoundLookups {
+		sounds.Warm(t.Context(), "Busy "+strconv.Itoa(i))
+	}
+	for range species.SoundLookups {
+		<-src.started
+	}
+
+	// Every permit is held, so this one queues.
+	sounds.Warm(t.Context(), "Queued")
+	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Millisecond)
+	defer cancel()
+	_, ok := sounds.Sound(ctx, "Queued")
+	assert.False(t, ok, "a page that cannot wait gets no audio")
+
+	close(src.release)
+	require.Eventually(t, func() bool {
+		_, ok := sounds.Sound(t.Context(), "Queued")
+		return ok
+	}, 5*time.Second, 5*time.Millisecond)
+
+	_, calls := src.stats()
+	assert.Equal(t, 1, calls["Queued"], "everyone who asked about it shared one lookup")
+}
+
+// panicking is a source that blows up.
+type panicking struct {
+	mu    sync.Mutex
+	calls int
+	then  species.SoundSource
+}
+
+func (p *panicking) Sound(ctx context.Context, name string) (species.Recording, bool, error) {
+	p.mu.Lock()
+	p.calls++
+	n := p.calls
+	p.mu.Unlock()
+
+	if n == 1 || p.then == nil {
+		panic("the source blew up")
+	}
+	return p.then.Sound(ctx, name)
+}
+
+// A lookup runs on its own goroutine, where the server's per-request
+// recovery cannot see it, so a panic there would end the process and every
+// player's game with it.
+func TestSounds_ASourceThatPanicsIsAFailedLookup(t *testing.T) {
+	t.Parallel()
+
+	src := &panicking{then: &soundsStub{recording: lionRoar, found: true}}
+	sounds, clk := newSounds(src)
+
+	ctx, cancel := context.WithTimeout(t.Context(), 2*time.Second)
+	defer cancel()
+
+	start := time.Now()
+	got, ok := sounds.Sound(ctx, "Panthera leo")
+	assert.False(t, ok)
+	assert.Zero(t, got)
+	assert.Less(t, time.Since(start), time.Second, "the caller is told, not left waiting for a lookup that died")
+
+	// The species is not wedged: after the brief pause it is asked about again.
+	clk.Advance(species.SoundFailureTTL + time.Second)
+	got, ok = sounds.Sound(ctx, "Panthera leo")
+	require.True(t, ok)
+	assert.Equal(t, lionRoar, got)
+}
+
+func TestSounds_APanicGivesBackItsPermit(t *testing.T) {
+	t.Parallel()
+
+	src := &panicking{}
+	sounds, clk := newSounds(src)
+
+	// More panics than there are permits: if one were kept, the later
+	// lookups would wait for ever.
+	for i := range species.SoundLookups + 2 {
+		clk.Advance(species.SoundFailureTTL + time.Second)
+		ctx, cancel := context.WithTimeout(t.Context(), 2*time.Second)
+		start := time.Now()
+		_, ok := sounds.Sound(ctx, "Panthera leo")
+		cancel()
+		assert.False(t, ok)
+		assert.Less(t, time.Since(start), time.Second, "lookup %d did not wait for a permit", i)
+	}
 }

@@ -21,6 +21,7 @@ type api struct {
 
 	mu      sync.Mutex
 	queries map[string]url.Values
+	agents  []string
 }
 
 func fixture(t *testing.T, name string) string {
@@ -39,6 +40,7 @@ func (a *api) serve(t *testing.T) *Client {
 		return func(w http.ResponseWriter, r *http.Request) {
 			a.mu.Lock()
 			a.queries[path] = r.URL.Query()
+			a.agents = append(a.agents, r.UserAgent())
 			a.mu.Unlock()
 
 			w.Header().Set("Content-Type", "application/json")
@@ -200,4 +202,23 @@ func TestClient_Sound_GivesUpWhenTheContextDoes(t *testing.T) {
 	_, ok, err := client.Sound(ctx, "Panthera leo")
 	require.Error(t, err)
 	assert.False(t, ok)
+}
+
+// An anonymous client is the first thing a rate limiter penalises, so every
+// call says whose it is.
+func TestClient_Sound_SaysWhoIsAsking(t *testing.T) {
+	t.Parallel()
+
+	a := &api{taxa: fixture(t, "taxa_lion.json"), observations: fixture(t, "observations_lion_sounds.json")}
+	client := a.serve(t)
+
+	_, _, err := client.Sound(context.Background(), "Panthera leo")
+	require.NoError(t, err)
+
+	require.Len(t, a.agents, 2, "one call for the taxon, one for its sounds")
+	for _, agent := range a.agents {
+		assert.Equal(t, UserAgent, agent)
+		assert.Contains(t, agent, "Sightings Safari")
+		assert.NotContains(t, agent, "Go-http-client")
+	}
 }

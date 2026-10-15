@@ -22,6 +22,10 @@ type Client struct {
 // BaseURL is the URL of the iNaturalist API.
 const BaseURL = "https://api.inaturalist.org/v1"
 
+// UserAgent says whose requests these are. iNaturalist rate limits, and an
+// anonymous client is the first to be limited.
+const UserAgent = "Sightings Safari (GopherCon Africa 2026 workshop app; gophercon.africa)"
+
 // New creates a new iNaturalist API client. An empty baseURL falls back to
 // BaseURL; tests pass the address of a stub server.
 func New(baseURL string) *Client {
@@ -29,7 +33,10 @@ func New(baseURL string) *Client {
 		baseURL = BaseURL
 	}
 	return &Client{
-		http: httputil.New(httputil.Config{BaseURL: baseURL}),
+		http: httputil.New(httputil.Config{
+			BaseURL: baseURL,
+			Headers: http.Header{"User-Agent": {UserAgent}},
+		}),
 	}
 }
 
