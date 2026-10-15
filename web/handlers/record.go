@@ -46,9 +46,12 @@ func Record(logger *slog.Logger, sightings RecordFinder, sounds SoundService) ht
 			return
 		}
 
+		// One lookup answers both: by the time recording() returns, the
+		// answer is cached, so asking again costs nothing.
 		render(ctx, w, logger, pages.Record(pages.RecordProps{
-			Sighting:  sight,
-			Recording: recording(ctx, sounds, sight, recordSoundWait),
+			Sighting:       sight,
+			Recording:      recording(ctx, sounds, sight, recordSoundWait),
+			RecordingKnown: recordingKnown(ctx, sounds, sight, recordSoundWait),
 		}))
 	}
 }

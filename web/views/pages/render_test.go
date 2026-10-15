@@ -972,11 +972,32 @@ func TestRecord_ShowsEverythingTheRecordHolds(t *testing.T) {
 	assert.Contains(t, html, "The map needs JavaScript", "the map says what to do without Leaflet")
 }
 
+// TestRecord_SaysNothingAboutAnUnfinishedLookup pins the difference between
+// "this animal has no recording" and "we have not found out yet". A lookup
+// takes several seconds against somebody else's server and the page waits
+// half of one, so the unfinished case is the common one on a first visit.
+// Claiming an absence there tells the reader something false, and a reload
+// then plays the sound it said did not exist.
+func TestRecord_SaysNothingAboutAnUnfinishedLookup(t *testing.T) {
+	t.Parallel()
+
+	s := sighting.Sighting{ID: uuid.New()}
+	html := renderRecord(t, pages.RecordProps{Sighting: s, RecordingKnown: false})
+
+	assert.NotContains(t, html, "No recording of this animal is available.")
+	assert.NotContains(t, html, "<audio")
+	// The heading stays, so the section does not collapse to nothing and
+	// shift the page when a later visit fills it in.
+	assert.Contains(t, html, "Hear it")
+}
+
 func TestRecord_StatesEachAbsenceInWords(t *testing.T) {
 	t.Parallel()
 
 	s := sighting.Sighting{ID: uuid.New()}
-	html := renderRecord(t, pages.RecordProps{Sighting: s})
+	// RecordingKnown: the lookup settled and there is no recording, which
+	// is the only case that may be stated out loud.
+	html := renderRecord(t, pages.RecordProps{Sighting: s, RecordingKnown: true})
 
 	for _, want := range []string{
 		"Unknown species",

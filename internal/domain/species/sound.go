@@ -82,8 +82,13 @@ type Sounds struct {
 // soundAnswer is one remembered lookup.
 type soundAnswer struct {
 	recording Recording
-	found     bool
-	expires   time.Time
+	// found says there is a recording. It is only meaningful when known.
+	found bool
+	// known says the source answered, whether or not it had a recording.
+	// A lookup that failed is not known: it establishes nothing about
+	// whether a recording exists, and a page must not say that it does.
+	known   bool
+	expires time.Time
 }
 
 // soundFlight is a lookup under way. Its answer may be read once done is
@@ -92,6 +97,26 @@ type soundFlight struct {
 	done   chan struct{}
 	answer soundAnswer
 }
+
+// SoundOutcome says what a lookup established about a species.
+//
+// The distinction matters to a page. "There is no recording of this animal"
+// and "nobody has asked yet" are different statements, and only the first is
+// safe to put in front of a reader: a lookup takes several seconds against
+// somebody else's server, so a page that treats an unfinished lookup as an
+// absence tells its reader something false, and tells it most often on the
+// first visit.
+type SoundOutcome int
+
+const (
+	// SoundUnknown means the lookup has not finished, failed, or was never
+	// possible. Nothing may be claimed either way.
+	SoundUnknown SoundOutcome = iota
+	// SoundNone means the source answered and has no recording.
+	SoundNone
+	// SoundFound means there is a recording to offer.
+	SoundFound
+)
 
 // SoundOption configures a Sounds.
 type SoundOption func(*Sounds)
@@ -124,16 +149,38 @@ func NewSounds(logger *slog.Logger, source SoundSource, opts ...SoundOption) *So
 // running when ctx runs out: a page that offers a sound must read the same
 // as one that has none, so a failure is logged here and goes no further.
 func (s *Sounds) Sound(ctx context.Context, scientificName string) (Recording, bool) {
+	recording, outcome := s.Lookup(ctx, scientificName)
+	return recording, outcome == SoundFound
+}
+
+// Lookup is Sound, but it also says whether the answer is established.
+// A caller that wants to write "no recording" needs to know the difference
+// between a source that has none and a lookup that has not come back.
+func (s *Sounds) Lookup(ctx context.Context, scientificName string) (Recording, SoundOutcome) {
 	flight := s.begin(ctx, scientificName)
 	if flight == nil {
-		return Recording{}, false
+		return Recording{}, SoundUnknown
 	}
 
 	select {
 	case <-flight.done:
-		return flight.answer.recording, flight.answer.found
+		return flight.answer.recording, flight.answer.outcome()
 	case <-ctx.Done():
-		return Recording{}, false
+		// Still running. It will finish and be kept for the next caller,
+		// but right now nothing is known.
+		return Recording{}, SoundUnknown
+	}
+}
+
+// outcome reads the answer as one of the three things it can be.
+func (a soundAnswer) outcome() SoundOutcome {
+	switch {
+	case !a.known:
+		return SoundUnknown
+	case a.found:
+		return SoundFound
+	default:
+		return SoundNone
 	}
 }
 
@@ -214,7 +261,7 @@ func (s *Sounds) fetch(ctx context.Context, name string, flight *soundFlight) {
 		return
 	}
 
-	answer, ttl = soundAnswer{recording: recording, found: found}, SoundTTL
+	answer, ttl = soundAnswer{recording: recording, found: found, known: true}, SoundTTL
 }
 
 // settle keeps the answer, ends the lookup and releases those waiting on it.

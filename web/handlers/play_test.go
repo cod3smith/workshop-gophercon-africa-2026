@@ -110,8 +110,8 @@ func guess(t *testing.T, session handlers.Session, games handlers.GameService, c
 // silence is a sound service that has no recording of anything.
 type silence struct{}
 
-func (silence) Sound(context.Context, string) (species.Recording, bool) {
-	return species.Recording{}, false
+func (silence) Lookup(context.Context, string) (species.Recording, species.SoundOutcome) {
+	return species.Recording{}, species.SoundNone
 }
 
 func (silence) Warm(context.Context, string) {}
@@ -311,15 +311,20 @@ func (s *soundsFor) Warm(_ context.Context, name string) {
 	s.warmed = append(s.warmed, name)
 }
 
-func (s *soundsFor) Sound(ctx context.Context, name string) (species.Recording, bool) {
+func (s *soundsFor) Lookup(ctx context.Context, name string) (species.Recording, species.SoundOutcome) {
 	s.asked = name
 	s.deadline, s.hasLimit = ctx.Deadline()
 
 	if s.block {
+		// A lookup that never comes back settles nothing, which is what a
+		// real one looks like when the page runs out of patience first.
 		<-ctx.Done()
-		return species.Recording{}, false
+		return species.Recording{}, species.SoundUnknown
 	}
-	return s.recording, name == s.name
+	if name != s.name {
+		return species.Recording{}, species.SoundNone
+	}
+	return s.recording, species.SoundFound
 }
 
 // gameOfLions is gameOf, with a species the reveal can name.

@@ -100,8 +100,10 @@ templ Record(props RecordProps) {
 						<h2 id="sound-heading" class="panel__title">Hear it</h2>
 						<!--
 							Where a recording exists it waits to be asked for: no autoplay, and
-							nothing fetched until play. Where none does, the page says so
-							rather than showing a player with nothing in it.
+							nothing fetched until play. Where the lookup settled and found
+							none, the page says so. Where it has not come back yet, the page
+							says nothing at all — claiming an absence it has not established
+							would be telling the reader something a reload disproves.
 						-->
 						if props.Recording != nil {
 							<div class="reveal__sound">
@@ -110,7 +112,7 @@ templ Record(props RecordProps) {
 								</audio>
 								<p class="reveal__sound-credit">{ RecordingCredit(*props.Recording) }</p>
 							</div>
-						} else {
+						} else if props.RecordingKnown {
 							<p class="panel__hint">No recording of this animal is available.</p>
 						}
 					</section>

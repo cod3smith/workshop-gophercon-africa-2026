@@ -315,7 +315,7 @@ func Record(props RecordProps) templ.Component {
 					return templ_7745c5c3_Err
 				}
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 31, "</section><section class=\"panel\" aria-labelledby=\"sound-heading\"><h2 id=\"sound-heading\" class=\"panel__title\">Hear it</h2><!--\n\t\t\t\t\t\t\tWhere a recording exists it waits to be asked for: no autoplay, and\n\t\t\t\t\t\t\tnothing fetched until play. Where none does, the page says so\n\t\t\t\t\t\t\trather than showing a player with nothing in it.\n\t\t\t\t\t\t-->")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 31, "</section><section class=\"panel\" aria-labelledby=\"sound-heading\"><h2 id=\"sound-heading\" class=\"panel__title\">Hear it</h2><!--\n\t\t\t\t\t\t\tWhere a recording exists it waits to be asked for: no autoplay, and\n\t\t\t\t\t\t\tnothing fetched until play. Where the lookup settled and found\n\t\t\t\t\t\t\tnone, the page says so. Where it has not come back yet, the page\n\t\t\t\t\t\t\tsays nothing at all — claiming an absence it has not established\n\t\t\t\t\t\t\twould be telling the reader something a reload disproves.\n\t\t\t\t\t\t-->")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -327,7 +327,7 @@ func Record(props RecordProps) templ.Component {
 				var templ_7745c5c3_Var17 string
 				templ_7745c5c3_Var17, templ_7745c5c3_Err = templ.ResolveAttributeValue(props.Recording.URL)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/views/pages/record.templ`, Line: 109, Col: 42}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/views/pages/record.templ`, Line: 111, Col: 42}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var17)
 				if templ_7745c5c3_Err != nil {
@@ -340,7 +340,7 @@ func Record(props RecordProps) templ.Component {
 				var templ_7745c5c3_Var18 string
 				templ_7745c5c3_Var18, templ_7745c5c3_Err = templ.ResolveAttributeValue(props.Recording.ContentType)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/views/pages/record.templ`, Line: 109, Col: 79}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/views/pages/record.templ`, Line: 111, Col: 79}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var18)
 				if templ_7745c5c3_Err != nil {
@@ -353,7 +353,7 @@ func Record(props RecordProps) templ.Component {
 				var templ_7745c5c3_Var19 string
 				templ_7745c5c3_Var19, templ_7745c5c3_Err = templ.JoinStringErrs(RecordingCredit(*props.Recording))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/views/pages/record.templ`, Line: 111, Col: 75}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/views/pages/record.templ`, Line: 113, Col: 75}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var19))
 				if templ_7745c5c3_Err != nil {
@@ -363,7 +363,7 @@ func Record(props RecordProps) templ.Component {
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-			} else {
+			} else if props.RecordingKnown {
 				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 36, "<p class=\"panel__hint\">No recording of this animal is available.</p>")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
@@ -381,7 +381,7 @@ func Record(props RecordProps) templ.Component {
 				var templ_7745c5c3_Var20 string
 				templ_7745c5c3_Var20, templ_7745c5c3_Err = templ.ResolveAttributeValue("Map of where this animal was seen: " + place(s.Location))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/views/pages/record.templ`, Line: 121, Col: 145}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/views/pages/record.templ`, Line: 123, Col: 145}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var20)
 				if templ_7745c5c3_Err != nil {

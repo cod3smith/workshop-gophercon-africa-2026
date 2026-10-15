@@ -19,6 +19,12 @@ type RecordProps struct {
 	// or nil when there is none to offer: the species has no recording, or
 	// the lookup failed or had not finished. The view never goes and looks.
 	Recording *species.Recording
+	// RecordingKnown says the question was settled: this animal genuinely
+	// has no recording, rather than the lookup not having come back. The
+	// page only states an absence when this is true, because a lookup takes
+	// several seconds and saying "there is none" while still looking would
+	// be telling the reader something false.
+	RecordingKnown bool
 }
 
 // hasPosition reports whether the sighting says where it was. The record

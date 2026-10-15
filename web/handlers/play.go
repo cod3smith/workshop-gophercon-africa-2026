@@ -21,12 +21,12 @@ type GameService interface {
 	Played(ctx context.Context, g game.Game) (map[uuid.UUID]sighting.Sighting, error)
 }
 
-// SoundService is what the reveal needs to offer the animal's sound. Sound
-// answers false for a species with no recording, and for a lookup that
-// failed or ran out of time: the reveal reads the same either way. Warm
-// starts a lookup without waiting for it.
+// SoundService is what a page needs to offer the animal's sound. Lookup
+// separates a species with no recording from a lookup that failed or ran
+// out of time, because a page that states an absence must only do so when
+// the absence is established. Warm starts a lookup without waiting for it.
 type SoundService interface {
-	Sound(ctx context.Context, scientificName string) (species.Recording, bool)
+	Lookup(ctx context.Context, scientificName string) (species.Recording, species.SoundOutcome)
 	Warm(ctx context.Context, scientificName string)
 }
 
@@ -220,11 +220,35 @@ func recording(ctx context.Context, sounds SoundService, s sighting.Sighting, wa
 	ctx, cancel := context.WithTimeout(ctx, wait)
 	defer cancel()
 
-	found, ok := sounds.Sound(ctx, name)
-	if !ok {
+	found, outcome := sounds.Lookup(ctx, name)
+	if outcome != species.SoundFound {
 		return nil
 	}
 	return &found
+}
+
+// recordingKnown reports whether the lookup settled the question, so a page
+// can tell "this animal has no recording" apart from "we have not found out
+// yet" and only say the first one out loud.
+func recordingKnown(ctx context.Context, sounds SoundService, s sighting.Sighting, wait time.Duration) bool {
+	// Settled, both of them. A site with no sound service will never offer
+	// a recording, and neither will a sighting whose species has no name to
+	// look up, so "none is available" is true of both and worth saying. The
+	// only unsettled case is a lookup that was made and did not come back.
+	if sounds == nil {
+		return true
+	}
+
+	name := soundName(s)
+	if name == "" {
+		return true
+	}
+
+	ctx, cancel := context.WithTimeout(ctx, wait)
+	defer cancel()
+
+	_, outcome := sounds.Lookup(ctx, name)
+	return outcome != species.SoundUnknown
 }
 
 // startFailed explains why a game couldn't begin. An empty database is the
