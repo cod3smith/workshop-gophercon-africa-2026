@@ -10,6 +10,7 @@ import (
 	"uuid"
 	"workshop/internal/domain/game"
 	"workshop/internal/domain/sighting"
+	"workshop/internal/domain/species"
 	"workshop/internal/domain/weather"
 	"workshop/web/views/components"
 )
@@ -27,6 +28,11 @@ type (
 		Sighting sighting.Sighting
 		Guess    sighting.Coordinates
 		Result   game.Result
+		// Recording is the sound of the animal, already found by the handler,
+		// or nil when there is none to offer: the species has no recording,
+		// or the lookup failed or ran out of time. The view never goes and
+		// looks, and renders the same either way.
+		Recording *species.Recording
 	}
 	// OverProps is a finished game, with the sightings it asked about so
 	// each round can be named.
@@ -180,6 +186,16 @@ func Credit(m sighting.Media, scientificName string) string {
 		return "Photographer unrecorded"
 	}
 	return name
+}
+
+// RecordingCredit names whoever made the recording, which their licence asks
+// for. It is the line the source formats, who and under which terms, as
+// given: assembling one from parts risks naming the wrong terms.
+func RecordingCredit(r species.Recording) string {
+	if credit := strings.TrimSpace(r.Attribution); credit != "" {
+		return credit
+	}
+	return "Recordist unrecorded"
 }
 
 // namesTheSpecies reports whether credit is the scientific name or just its

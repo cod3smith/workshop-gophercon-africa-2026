@@ -1106,6 +1106,30 @@ a:hover {
 	font-style: italic;
 }
 
+/* The animal's sound, where a recording exists. The control is the
+   browser's own and is left alone; it only has to fit the column it is
+   in, which on a phone is narrow. */
+.reveal__sound {
+	margin-top: 1rem;
+	min-width: 0;
+}
+
+.reveal__sound audio {
+	display: block;
+	width: 100%;
+	min-width: 0;
+	max-width: 24rem;
+}
+
+/* Credited the way the photograph is, beside the thing it is for. */
+.reveal__sound-credit {
+	margin: 0.5rem 0 0;
+	color: var(--paper-dim);
+	font-size: 0.72rem;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+}
+
 .reveal__facts p {
 	margin: 1.2rem 0 0;
 }

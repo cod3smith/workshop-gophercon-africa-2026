@@ -6,9 +6,11 @@ import (
 	"log/slog"
 	"net/http"
 	"strconv"
+	"time"
 	"uuid"
 	"workshop/internal/domain/game"
 	"workshop/internal/domain/sighting"
+	"workshop/internal/domain/species"
 	"workshop/web/views/pages"
 )
 
@@ -19,9 +21,25 @@ type GameService interface {
 	Played(ctx context.Context, g game.Game) (map[uuid.UUID]sighting.Sighting, error)
 }
 
+// SoundService is what the reveal needs to offer the animal's sound. Sound
+// answers false for a species with no recording, and for a lookup that
+// failed or ran out of time: the reveal reads the same either way. Warm
+// starts a lookup without waiting for it.
+type SoundService interface {
+	Sound(ctx context.Context, scientificName string) (species.Recording, bool)
+	Warm(ctx context.Context, scientificName string)
+}
+
+// soundTimeout is how long the reveal waits to learn whether there is a
+// recording. The lookup is a call to somebody else's server, and the
+// player has a guess to be told about, so a slow one is given up on.
+const soundTimeout = 1500 * time.Millisecond
+
 // Play renders the round the player is on, and starts them a game when
-// they arrive without one.
-func Play(logger *slog.Logger, games GameService, session Session) http.HandlerFunc {
+// they arrive without one. While the question is on screen it also starts
+// finding the animal's recording, so the reveal has it ready; nothing of
+// that is on the question itself.
+func Play(logger *slog.Logger, games GameService, session Session, sounds SoundService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 
@@ -64,6 +82,8 @@ func Play(logger *slog.Logger, games GameService, session Session) http.HandlerF
 			return
 		}
 
+		warm(ctx, sounds, sight)
+
 		render(ctx, w, logger, pages.Question(pages.QuestionProps{Game: g, Sighting: sight}))
 	}
 }
@@ -95,8 +115,10 @@ func NewGame(logger *slog.Logger, games GameService, session Session) http.Handl
 	}
 }
 
-// Guess scores the player's guess against where the animal was really seen.
-func Guess(logger *slog.Logger, games GameService, session Session) http.HandlerFunc {
+// Guess scores the player's guess against where the animal was really seen,
+// and, where a recording of it exists, lets them hear it. A nil sounds is a
+// game with none.
+func Guess(logger *slog.Logger, games GameService, session Session, sounds SoundService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 
@@ -153,8 +175,56 @@ func Guess(logger *slog.Logger, games GameService, session Session) http.Handler
 			Sighting: sight,
 			Guess:    guess,
 			Result:   result,
+			// Only now, with the guess in and the cookie written: the sound
+			// names the animal, so it is looked for after the round is
+			// scored and never on the question.
+			Recording: recording(ctx, sounds, sight),
 		}))
 	}
+}
+
+// soundName is the name a recording is looked up by. The canonical name is
+// the one iNaturalist knows the species by; the scientific name carries
+// the authority ("Panthera leo (Linnaeus, 1758)").
+func soundName(s sighting.Sighting) string {
+	if s.Species.CanonicalName != "" {
+		return s.Species.CanonicalName
+	}
+	return s.Species.ScientificName
+}
+
+// warm starts finding the sound of the animal in sight, for the reveal
+// that follows the question. It never waits, and never reaches the page.
+func warm(ctx context.Context, sounds SoundService, s sighting.Sighting) {
+	if sounds == nil {
+		return
+	}
+	if name := soundName(s); name != "" {
+		sounds.Warm(ctx, name)
+	}
+}
+
+// recording finds the sound of the animal in sight, or returns nil. The
+// lookup has its own short deadline, so a slow service cannot hold the
+// reveal up, and nothing it does wrong reaches the player.
+func recording(ctx context.Context, sounds SoundService, s sighting.Sighting) *species.Recording {
+	if sounds == nil {
+		return nil
+	}
+
+	name := soundName(s)
+	if name == "" {
+		return nil
+	}
+
+	ctx, cancel := context.WithTimeout(ctx, soundTimeout)
+	defer cancel()
+
+	found, ok := sounds.Sound(ctx, name)
+	if !ok {
+		return nil
+	}
+	return &found
 }
 
 // startFailed explains why a game couldn't begin. An empty database is the

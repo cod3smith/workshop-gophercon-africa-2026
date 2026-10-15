@@ -1,0 +1,37 @@
+{
+  "total_results": 45,
+  "page": 1,
+  "per_page": 30,
+  "results": [
+    {
+      "id": 384322021,
+      "license_code": null,
+      "sounds": [
+        {"id": 2084652, "license_code": null, "attribution": "(c) Bill Witzerman, all rights reserved", "file_url": "https://static.inaturalist.org/sounds/2084652.m4a?1784831802", "file_content_type": "audio/mp4", "hidden": false}
+      ]
+    },
+    {
+      "id": 390000001,
+      "license_code": "cc-by",
+      "sounds": [
+        {"id": 2100001, "license_code": "cc-by", "attribution": "(c) Someone Hidden, some rights reserved (CC BY)", "file_url": "https://static.inaturalist.org/sounds/2100001.m4a?1", "file_content_type": "audio/mp4", "hidden": true},
+        {"id": 2100002, "license_code": "cc-by", "attribution": "(c) Someone Odd, some rights reserved (CC BY)", "file_url": "https://static.inaturalist.org/sounds/2100002.mid?1", "file_content_type": "audio/midi", "hidden": false},
+        {"id": 2100003, "license_code": "cc-by", "attribution": "(c) Someone Streamed, some rights reserved (CC BY)", "file_url": null, "file_content_type": null, "hidden": false}
+      ]
+    },
+    {
+      "id": 400704508,
+      "license_code": "cc0",
+      "sounds": [
+        {"id": 2160774, "license_code": "cc-by-nc", "attribution": "(c) Africa Gomez, some rights reserved (CC BY-NC)", "file_url": "https://static.inaturalist.org/sounds/2160774.wav?1789563327", "file_content_type": "audio/x-wav", "hidden": false}
+      ]
+    },
+    {
+      "id": 383220237,
+      "license_code": "cc-by-nc",
+      "sounds": [
+        {"id": 2079717, "license_code": "cc-by-nc", "attribution": "(c) pierreyveshenry, some rights reserved (CC BY-NC)", "file_url": "https://static.inaturalist.org/sounds/2079717.m4a?1784532681", "file_content_type": "audio/mp4", "hidden": false}
+      ]
+    }
+  ]
+}

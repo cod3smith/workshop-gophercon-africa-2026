@@ -10,10 +10,12 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 	"uuid"
 	"workshop/internal/common/logs"
 	"workshop/internal/domain/game"
 	"workshop/internal/domain/sighting"
+	"workshop/internal/domain/species"
 	"workshop/web/handlers"
 
 	"github.com/stretchr/testify/assert"
@@ -89,7 +91,7 @@ func begin(t *testing.T, session handlers.Session, games handlers.GameService) *
 	t.Helper()
 
 	rec := httptest.NewRecorder()
-	handlers.Play(quietLogger(), games, session)(rec, httptest.NewRequest(http.MethodGet, "/play", nil))
+	handlers.Play(quietLogger(), games, session, silence{})(rec, httptest.NewRequest(http.MethodGet, "/play", nil))
 	require.Equal(t, http.StatusOK, rec.Code)
 
 	cookies := rec.Result().Cookies()
@@ -98,8 +100,25 @@ func begin(t *testing.T, session handlers.Session, games handlers.GameService) *
 	return cookies[0]
 }
 
-// guess posts a guess for round, carrying cookie.
+// guess posts a guess for round, carrying cookie, to a game with no sounds.
 func guess(t *testing.T, session handlers.Session, games handlers.GameService, cookie *http.Cookie, round, lat, lng string) *httptest.ResponseRecorder {
+	t.Helper()
+
+	return guessHearing(t, session, games, silence{}, cookie, round, lat, lng)
+}
+
+// silence is a sound service that has no recording of anything.
+type silence struct{}
+
+func (silence) Sound(context.Context, string) (species.Recording, bool) {
+	return species.Recording{}, false
+}
+
+func (silence) Warm(context.Context, string) {}
+
+// guessHearing posts a guess for round, carrying cookie, with sounds to
+// consult for the reveal.
+func guessHearing(t *testing.T, session handlers.Session, games handlers.GameService, sounds handlers.SoundService, cookie *http.Cookie, round, lat, lng string) *httptest.ResponseRecorder {
 	t.Helper()
 
 	form := url.Values{"round": {round}, "lat": {lat}, "lng": {lng}}
@@ -110,7 +129,7 @@ func guess(t *testing.T, session handlers.Session, games handlers.GameService, c
 	}
 
 	rec := httptest.NewRecorder()
-	handlers.Guess(quietLogger(), games, session)(rec, r)
+	handlers.Guess(quietLogger(), games, session, sounds)(rec, r)
 
 	return rec
 }
@@ -148,7 +167,7 @@ func TestPlay(t *testing.T) {
 		games := fakeGames{newErr: game.ErrNotEnoughSightings}
 
 		rec := httptest.NewRecorder()
-		handlers.Play(quietLogger(), games, handlers.NewSession())(rec, httptest.NewRequest(http.MethodGet, "/play", nil))
+		handlers.Play(quietLogger(), games, handlers.NewSession(), silence{})(rec, httptest.NewRequest(http.MethodGet, "/play", nil))
 
 		assert.Equal(t, http.StatusServiceUnavailable, rec.Code)
 		assert.Contains(t, rec.Body.String(), "db seed")
@@ -267,10 +286,136 @@ func TestPlay_SharesTheAddressItWasReachedAt(t *testing.T) {
 			}
 
 			rec := httptest.NewRecorder()
-			handlers.Play(quietLogger(), games, session)(rec, r)
+			handlers.Play(quietLogger(), games, session, silence{})(rec, r)
 
 			require.Equal(t, http.StatusOK, rec.Code)
 			assert.Contains(t, rec.Body.String(), test.want, "the share line should carry the host the player used, not a hardcoded one")
 		})
 	}
+}
+
+// soundsFor is a sound service that knows one species and records what it
+// was asked, and under what deadline.
+type soundsFor struct {
+	name      string
+	recording species.Recording
+	block     bool
+
+	asked    string
+	warmed   []string
+	deadline time.Time
+	hasLimit bool
+}
+
+func (s *soundsFor) Warm(_ context.Context, name string) {
+	s.warmed = append(s.warmed, name)
+}
+
+func (s *soundsFor) Sound(ctx context.Context, name string) (species.Recording, bool) {
+	s.asked = name
+	s.deadline, s.hasLimit = ctx.Deadline()
+
+	if s.block {
+		<-ctx.Done()
+		return species.Recording{}, false
+	}
+	return s.recording, name == s.name
+}
+
+// gameOfLions is gameOf, with a species the reveal can name.
+func gameOfLions() fakeGames {
+	games := gameOf()
+	for i := range games.sightings {
+		games.sightings[i].Species = species.Species{
+			ScientificName: "Panthera leo (Linnaeus, 1758)",
+			CanonicalName:  "Panthera leo",
+			VernacularName: "lion",
+		}
+	}
+	return games
+}
+
+var lionRoar = species.Recording{
+	URL:         "https://static.inaturalist.org/sounds/2160774.wav?1789563327",
+	ContentType: "audio/x-wav",
+	Licence:     "cc-by-nc",
+	Attribution: "(c) Africa Gomez, some rights reserved (CC BY-NC)",
+}
+
+func TestGuess_TheRevealOffersTheSoundWhenThereIsOne(t *testing.T) {
+	t.Parallel()
+
+	session, games := handlers.NewSession(), gameOfLions()
+	cookie := begin(t, session, games)
+
+	sounds := &soundsFor{name: "Panthera leo", recording: lionRoar}
+	rec := guessHearing(t, session, games, sounds, cookie, "0", "-1.29", "36.82")
+
+	require.Equal(t, http.StatusOK, rec.Code)
+	assert.Equal(t, "Panthera leo", sounds.asked, "the species is looked up by its name without the authority")
+	assert.Contains(t, rec.Body.String(), "<audio")
+	assert.Contains(t, rec.Body.String(), "Africa Gomez")
+}
+
+func TestGuess_TheRevealIsSilentWhenThereIsNoRecording(t *testing.T) {
+	t.Parallel()
+
+	session, games := handlers.NewSession(), gameOfLions()
+	cookie := begin(t, session, games)
+
+	rec := guessHearing(t, session, games, &soundsFor{name: "Acinonyx jubatus", recording: lionRoar}, cookie, "0", "-1.29", "36.82")
+
+	require.Equal(t, http.StatusOK, rec.Code)
+	assert.NotContains(t, rec.Body.String(), "<audio")
+}
+
+func TestGuess_RunsWithoutASoundService(t *testing.T) {
+	t.Parallel()
+
+	session, games := handlers.NewSession(), gameOfLions()
+	cookie := begin(t, session, games)
+
+	rec := guessHearing(t, session, games, nil, cookie, "0", "-1.29", "36.82")
+
+	require.Equal(t, http.StatusOK, rec.Code)
+	assert.NotContains(t, rec.Body.String(), "<audio")
+}
+
+// A slow iNaturalist must not hold up the reveal, and a reveal that gave up
+// waiting reads exactly as one for a species with no recording.
+func TestGuess_GivesTheSoundLookupItsOwnShortDeadline(t *testing.T) {
+	t.Parallel()
+
+	session, games := handlers.NewSession(), gameOfLions()
+	cookie := begin(t, session, games)
+
+	sounds := &soundsFor{block: true}
+	start := time.Now()
+	rec := guessHearing(t, session, games, sounds, cookie, "0", "-1.29", "36.82")
+
+	require.Equal(t, http.StatusOK, rec.Code)
+	assert.True(t, sounds.hasLimit, "the lookup is not allowed to wait for as long as the request does")
+	assert.LessOrEqual(t, time.Until(sounds.deadline), 3*time.Second, "a second or two, not the transport's thirty")
+	assert.Less(t, time.Since(start), 10*time.Second)
+	assert.NotContains(t, rec.Body.String(), "<audio")
+	assert.Contains(t, rec.Body.String(), "reveal__name", "the guess is still answered")
+}
+
+// The question is on screen for a while before the guess, and finding a
+// recording takes iNaturalist several seconds, so the lookup is started
+// when the question is shown and is ready for the reveal. Nothing about it
+// reaches the page.
+func TestPlay_StartsLookingForTheSoundWhileTheQuestionIsOnScreen(t *testing.T) {
+	t.Parallel()
+
+	session, games := handlers.NewSession(), gameOfLions()
+	sounds := &soundsFor{name: "Panthera leo", recording: lionRoar}
+
+	rec := httptest.NewRecorder()
+	handlers.Play(quietLogger(), games, session, sounds)(rec, httptest.NewRequest(http.MethodGet, "/play", nil))
+
+	require.Equal(t, http.StatusOK, rec.Code)
+	assert.Equal(t, []string{"Panthera leo"}, sounds.warmed)
+	assert.NotContains(t, rec.Body.String(), "<audio", "the question must stay silent")
+	assert.NotContains(t, rec.Body.String(), "Panthera", "and name nothing")
 }

@@ -1,0 +1,14 @@
+{
+  "total_results": 2,
+  "page": 1,
+  "per_page": 30,
+  "results": [
+    {"id": 1, "license_code": "cc0", "sounds": [
+      {"id": 10, "license_code": null, "attribution": "(c) A, all rights reserved", "file_url": "https://static.inaturalist.org/sounds/10.m4a", "file_content_type": "audio/mp4", "hidden": false},
+      {"id": 11, "license_code": "cc-by", "attribution": "(c) B, some rights reserved (CC BY)", "file_url": "https://static.inaturalist.org/sounds/11.mid", "file_content_type": "audio/midi", "hidden": false},
+      {"id": 12, "license_code": "cc-by", "attribution": "", "file_url": "https://static.inaturalist.org/sounds/12.m4a", "file_content_type": "audio/mp4", "hidden": false},
+      {"id": 13, "license_code": "cc-by", "attribution": "(c) C, some rights reserved (CC BY)", "file_url": "javascript:alert(1)", "file_content_type": "audio/mp4", "hidden": false}
+    ]},
+    {"id": 2, "license_code": "cc0", "sounds": []}
+  ]
+}

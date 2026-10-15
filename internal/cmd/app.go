@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"os"
 	"workshop/internal/clients/gbif"
+	"workshop/internal/clients/inaturalist"
 	"workshop/internal/clients/openmeteo"
 	"workshop/internal/common/logs"
 	"workshop/internal/common/printer"
@@ -34,6 +35,7 @@ type app struct {
 	Sightings  *sighting.Service
 	Games      *game.Service
 	Species    *species.Service
+	Sounds     *species.Sounds
 	Weather    *weather.Service
 
 	// live is set by --live, when GBIF and Open-Meteo are the real APIs
@@ -98,7 +100,11 @@ func bootstrap(ctx context.Context, cfg config.Config, level slog.Level, live bo
 		Sightings:  sightingSvc,
 		Games:      game.NewService(sightingSvc),
 		Species:    speciesSvc,
-		Weather:    weatherSvc,
-		live:       live,
+		// iNaturalist is always the real one: there is no recording of an
+		// animal in the mock, and the photographs are served from there too.
+		// Without a network the reveal simply has no sound.
+		Sounds:  species.NewSounds(logger, inaturalist.New("")),
+		Weather: weatherSvc,
+		live:    live,
 	}, teardown, nil
 }

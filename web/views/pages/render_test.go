@@ -12,6 +12,7 @@ import (
 	"uuid"
 	"workshop/internal/domain/game"
 	"workshop/internal/domain/sighting"
+	"workshop/internal/domain/species"
 	"workshop/internal/domain/weather"
 	"workshop/web/views/pages"
 
@@ -308,6 +309,14 @@ func TestQuestion_ExplainsTheGroupAndTheWeatherInPlainEnglish(t *testing.T) {
 	assert.NotContains(t, html, "State of sky on the whole unchanged", "the stored description is from the wrong table")
 }
 
+func TestRecordingCredit(t *testing.T) {
+	t.Parallel()
+
+	assert.Equal(t, "(c) Africa Gomez, some rights reserved (CC BY-NC)", pages.RecordingCredit(*whaleSong), "the source's line, as given")
+	assert.Equal(t, "Recordist unrecorded", pages.RecordingCredit(species.Recording{}))
+	assert.Equal(t, "Recordist unrecorded", pages.RecordingCredit(species.Recording{Attribution: "  "}))
+}
+
 func TestCredit(t *testing.T) {
 	t.Parallel()
 
@@ -510,6 +519,14 @@ func renderAnswer(t *testing.T, props pages.AnswerProps) string {
 func answered(t *testing.T) string {
 	t.Helper()
 
+	return answeredWith(t, nil)
+}
+
+// answeredWith is that page when a recording of the animal was found, or
+// not (nil).
+func answeredWith(t *testing.T, recording *species.Recording) string {
+	t.Helper()
+
 	s := sighting.Sighting{
 		ID:       uuid.New(),
 		Location: sighting.Location{Locality: "Hermanus", Coordinates: sighting.Coordinates{Latitude: -34.4, Longitude: 19.2}},
@@ -527,7 +544,7 @@ func answered(t *testing.T) string {
 	result := game.Result{DistanceKm: 900, Points: game.ScoreFor(900)}
 	g.Record(result)
 
-	return renderAnswer(t, pages.AnswerProps{Game: g, Sighting: s, Result: result})
+	return renderAnswer(t, pages.AnswerProps{Game: g, Sighting: s, Result: result, Recording: recording})
 }
 
 // The answer is the one thing the player has been waiting for, so it
@@ -543,6 +560,81 @@ func TestAnswer_NamesTheAnimalBeforeTheMap(t *testing.T) {
 
 	assert.Less(t, name, strings.Index(html, `class="map`), "the animal is named above the map")
 	assert.Greater(t, name, strings.Index(html, `class="result__head`), "the score still opens the screen")
+}
+
+// whaleSong is a recording as the source supplies one.
+var whaleSong = &species.Recording{
+	URL:         "https://static.inaturalist.org/sounds/2160774.wav?1789563327",
+	ContentType: "audio/x-wav",
+	Licence:     "cc-by-nc",
+	Attribution: "(c) Africa Gomez, some rights reserved (CC BY-NC)",
+}
+
+// A reveal with a recording offers it; one without says nothing at all.
+func TestAnswer_OffersTheSoundWhereThereIsOne(t *testing.T) {
+	t.Parallel()
+
+	withSound := answeredWith(t, whaleSong)
+	withoutSound := answered(t)
+
+	assert.Contains(t, withSound, "<audio")
+	assert.Contains(t, withSound, "controls")
+	assert.Contains(t, withSound, `src="https://static.inaturalist.org/sounds/2160774.wav?1789563327"`)
+	assert.Contains(t, withSound, `type="audio/x-wav"`)
+	assert.Contains(t, withSound, "Africa Gomez, some rights reserved (CC BY-NC)", "the licence asks for the recordist to be named")
+
+	assert.NotContains(t, withoutSound, "<audio")
+	assert.NotContains(t, withoutSound, "<source")
+	// The page's own comments explain themselves in words; the player is
+	// what reaches a reader, so that is what has to be silent.
+	readable := regexp.MustCompile(`(?s)<!--.*?-->`).ReplaceAllString(withoutSound, "")
+	assert.NotContains(t, strings.ToLower(readable), "recording", "no apology and no empty player either")
+	assert.NotContains(t, readable, "reveal__sound")
+}
+
+// A conference phone should not fetch audio nobody asked for, and nothing
+// should make a noise by itself.
+func TestAnswer_TheSoundWaitsToBeAskedFor(t *testing.T) {
+	t.Parallel()
+
+	html := answeredWith(t, whaleSong)
+
+	audio := regexp.MustCompile(`<audio[^>]*>`).FindString(html)
+	require.NotEmpty(t, audio)
+	assert.Contains(t, audio, `preload="none"`)
+	assert.NotContains(t, audio, "autoplay")
+}
+
+// The reveal belongs to the animal, so the sound sits with its name, above
+// the map, and is credited beside it the way the photograph is.
+func TestAnswer_TheSoundSitsWithTheAnimal(t *testing.T) {
+	t.Parallel()
+
+	html := answeredWith(t, whaleSong)
+
+	name := strings.Index(html, `class="reveal__name"`)
+	audio := strings.Index(html, "<audio")
+	credit := strings.Index(html, "Africa Gomez")
+	require.GreaterOrEqual(t, audio, 0)
+
+	assert.Greater(t, audio, name)
+	assert.Less(t, audio, strings.Index(html, `class="map`), "the sound is above the map")
+	assert.Greater(t, credit, audio, "the credit follows the player it is for")
+	assert.Less(t, credit, strings.Index(html, `class="map`))
+}
+
+func TestAnswer_TheRecordistCreditIsEscaped(t *testing.T) {
+	t.Parallel()
+
+	html := answeredWith(t, &species.Recording{
+		URL:         "https://static.inaturalist.org/sounds/1.m4a",
+		ContentType: "audio/mp4",
+		Licence:     "cc-by",
+		Attribution: "(c) <script>alert(1)</script>, some rights reserved (CC BY)",
+	})
+
+	assert.NotContains(t, html, "<script>alert(1)")
+	assert.Contains(t, html, "&lt;script&gt;")
 }
 
 func TestAnswer_ShowsTheAnimalAtASmallSize(t *testing.T) {

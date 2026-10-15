@@ -236,6 +236,19 @@ templ Answer(props AnswerProps) {
 					if props.Sighting.Species.ScientificName != "" {
 						<p class="reveal__scientific">{ props.Sighting.Species.ScientificName }</p>
 					}
+					<!--
+						Only here, never on the question: a lion's roar would name the animal
+						the clue panel withholds. It waits to be asked for, and where there is
+						no recording there is nothing at all, not an empty player.
+					-->
+					if props.Recording != nil {
+						<div class="reveal__sound">
+							<audio controls preload="none" aria-label="Hear the animal">
+								<source src={ props.Recording.URL } type={ props.Recording.ContentType }/>
+							</audio>
+							<p class="reveal__sound-credit">{ RecordingCredit(*props.Recording) }</p>
+						</div>
+					}
 				</div>
 			</div>
 			<div class="map map--answer" data-safari-map="safari-map" role="img" aria-label="Your guess and where the animal was really seen">

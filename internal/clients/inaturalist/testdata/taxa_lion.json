@@ -1,0 +1,10 @@
+{
+  "total_results": 3,
+  "page": 1,
+  "per_page": 3,
+  "results": [
+    {"id": 569099, "name": "Panthera spelaea", "rank": "species", "matched_term": "Panthera leo spelaea", "preferred_common_name": "Steppe Lion"},
+    {"id": 41964, "name": "Panthera leo", "rank": "species", "matched_term": "Panthera leo", "preferred_common_name": "Lion"},
+    {"id": 569096, "name": "Panthera atrox", "rank": "species", "matched_term": "Panthera leo atrox", "preferred_common_name": "American Lion"}
+  ]
+}

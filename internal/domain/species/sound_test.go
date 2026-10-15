@@ -1,0 +1,301 @@
+package species_test
+
+import (
+	"context"
+	"errors"
+	"io"
+	"log/slog"
+	"sync"
+	"testing"
+	"time"
+	"workshop/internal/common/logs"
+	"workshop/internal/domain/species"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
+
+func quietLogger() *slog.Logger { return logs.NewProduction(io.Discard, slog.LevelError) }
+
+// soundsStub is a recording source that counts the questions put to it.
+type soundsStub struct {
+	mu        sync.Mutex
+	calls     map[string]int
+	recording species.Recording
+	found     bool
+	err       error
+}
+
+func (s *soundsStub) Sound(_ context.Context, name string) (species.Recording, bool, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if s.calls == nil {
+		s.calls = map[string]int{}
+	}
+	s.calls[name]++
+
+	return s.recording, s.found, s.err
+}
+
+func (s *soundsStub) asked(name string) int {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.calls[name]
+}
+
+var lionRoar = species.Recording{
+	URL:         "https://static.inaturalist.org/sounds/1.m4a?1",
+	ContentType: "audio/mp4",
+	Licence:     "cc-by-nc",
+	Attribution: "(c) A Recordist, some rights reserved (CC BY-NC)",
+}
+
+// clock is a time that only moves when a test says so.
+type clock struct{ now time.Time }
+
+func (c *clock) Now() time.Time          { return c.now }
+func (c *clock) Advance(d time.Duration) { c.now = c.now.Add(d) }
+
+func newSounds(source species.SoundSource) (*species.Sounds, *clock) {
+	c := &clock{now: time.Date(2026, 10, 15, 9, 0, 0, 0, time.UTC)}
+	return species.NewSounds(quietLogger(), source, species.WithSoundClock(c.Now)), c
+}
+
+func TestSounds_RemembersARecording(t *testing.T) {
+	t.Parallel()
+
+	stub := &soundsStub{recording: lionRoar, found: true}
+	sounds, clk := newSounds(stub)
+
+	for range 3 {
+		got, ok := sounds.Sound(t.Context(), "Panthera leo")
+		require.True(t, ok)
+		assert.Equal(t, lionRoar, got)
+	}
+	assert.Equal(t, 1, stub.asked("Panthera leo"), "a page view is not a round trip")
+
+	clk.Advance(species.SoundTTL + time.Second)
+	_, ok := sounds.Sound(t.Context(), "Panthera leo")
+	require.True(t, ok)
+	assert.Equal(t, 2, stub.asked("Panthera leo"), "an old answer is asked for again")
+}
+
+// Most species have no recording, so if only hits were remembered the common
+// case would go to iNaturalist on every reveal.
+func TestSounds_RemembersAbsenceToo(t *testing.T) {
+	t.Parallel()
+
+	stub := &soundsStub{found: false}
+	sounds, clk := newSounds(stub)
+
+	for range 5 {
+		_, ok := sounds.Sound(t.Context(), "Acinonyx jubatus")
+		assert.False(t, ok)
+	}
+	assert.Equal(t, 1, stub.asked("Acinonyx jubatus"))
+
+	clk.Advance(species.SoundTTL + time.Second)
+	sounds.Sound(t.Context(), "Acinonyx jubatus")
+	assert.Equal(t, 2, stub.asked("Acinonyx jubatus"))
+}
+
+func TestSounds_KeepsSpeciesApart(t *testing.T) {
+	t.Parallel()
+
+	stub := &soundsStub{found: false}
+	sounds, _ := newSounds(stub)
+
+	sounds.Sound(t.Context(), "Acinonyx jubatus")
+	sounds.Sound(t.Context(), "Panthera leo")
+	sounds.Sound(t.Context(), "Panthera leo")
+
+	assert.Equal(t, 1, stub.asked("Acinonyx jubatus"))
+	assert.Equal(t, 1, stub.asked("Panthera leo"))
+}
+
+// A failed lookup says nothing about whether a recording exists, so it is
+// not remembered as a day of silence, but it is not retried on every view
+// either: a rate-limited service asked again at once stays rate-limited.
+func TestSounds_AFailureIsNoRecordingForAShortWhile(t *testing.T) {
+	t.Parallel()
+
+	stub := &soundsStub{err: errors.New("429 too many requests")}
+	sounds, clk := newSounds(stub)
+
+	for range 3 {
+		got, ok := sounds.Sound(t.Context(), "Panthera leo")
+		assert.False(t, ok)
+		assert.Zero(t, got)
+	}
+	assert.Equal(t, 1, stub.asked("Panthera leo"))
+
+	clk.Advance(species.SoundFailureTTL + time.Second)
+	stub.mu.Lock()
+	stub.err, stub.recording, stub.found = nil, lionRoar, true
+	stub.mu.Unlock()
+
+	got, ok := sounds.Sound(t.Context(), "Panthera leo")
+	require.True(t, ok, "once the pause is over, the species is asked about again")
+	assert.Equal(t, lionRoar, got)
+}
+
+func TestSounds_NeedsAName(t *testing.T) {
+	t.Parallel()
+
+	stub := &soundsStub{recording: lionRoar, found: true}
+	sounds, _ := newSounds(stub)
+
+	_, ok := sounds.Sound(t.Context(), "")
+	assert.False(t, ok)
+	assert.Zero(t, stub.asked(""))
+}
+
+func TestSounds_NoSourceIsNoRecording(t *testing.T) {
+	t.Parallel()
+
+	sounds := species.NewSounds(quietLogger(), nil)
+
+	_, ok := sounds.Sound(t.Context(), "Panthera leo")
+	assert.False(t, ok)
+}
+
+func TestSounds_IsSafeToShare(t *testing.T) {
+	t.Parallel()
+
+	stub := &soundsStub{recording: lionRoar, found: true}
+	sounds, _ := newSounds(stub)
+
+	var wg sync.WaitGroup
+	for range 20 {
+		wg.Go(func() { sounds.Sound(t.Context(), "Panthera leo") })
+	}
+	wg.Wait()
+}
+
+// gate is a source that answers only when a test lets it, so a lookup can
+// be slower than the page waiting on it.
+type gate struct {
+	release   chan struct{}
+	started   chan struct{}
+	mu        sync.Mutex
+	calls     int
+	recording species.Recording
+}
+
+func newGate() *gate {
+	return &gate{release: make(chan struct{}), started: make(chan struct{}, 10), recording: lionRoar}
+}
+
+func (g *gate) Sound(ctx context.Context, _ string) (species.Recording, bool, error) {
+	g.mu.Lock()
+	g.calls++
+	g.mu.Unlock()
+	g.started <- struct{}{}
+
+	select {
+	case <-g.release:
+		return g.recording, true, nil
+	case <-ctx.Done():
+		return species.Recording{}, false, ctx.Err()
+	}
+}
+
+func (g *gate) asked() int {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	return g.calls
+}
+
+// The source can take longer than a reveal can wait (iNaturalist takes
+// several seconds), but the answer it eventually gives is still kept, so the
+// next reveal has it.
+func TestSounds_ASlowLookupFinishesAfterThePageHasGivenUp(t *testing.T) {
+	t.Parallel()
+
+	g := newGate()
+	sounds := species.NewSounds(quietLogger(), g)
+
+	ctx, cancel := context.WithTimeout(t.Context(), 50*time.Millisecond)
+	defer cancel()
+
+	_, ok := sounds.Sound(ctx, "Panthera leo")
+	assert.False(t, ok, "the page does not wait for a slow source")
+
+	close(g.release)
+	require.Eventually(t, func() bool {
+		_, ok := sounds.Sound(t.Context(), "Panthera leo")
+		return ok
+	}, 2*time.Second, 5*time.Millisecond, "the lookup the page gave up on still lands")
+
+	assert.Equal(t, 1, g.asked(), "and was not started again")
+}
+
+// Warming is how a reveal has its answer ready: the question is on screen
+// for a while before the guess, and the lookup runs in that time.
+func TestSounds_WarmingHasTheAnswerReadyForTheReveal(t *testing.T) {
+	t.Parallel()
+
+	g := newGate()
+	sounds := species.NewSounds(quietLogger(), g)
+
+	sounds.Warm(t.Context(), "Panthera leo")
+	<-g.started
+	close(g.release)
+
+	require.Eventually(t, func() bool {
+		_, ok := sounds.Sound(t.Context(), "Panthera leo")
+		return ok
+	}, 2*time.Second, 5*time.Millisecond)
+	assert.Equal(t, 1, g.asked())
+}
+
+func TestSounds_WarmingDoesNotWait(t *testing.T) {
+	t.Parallel()
+
+	g := newGate()
+	sounds := species.NewSounds(quietLogger(), g)
+
+	done := make(chan struct{})
+	go func() {
+		sounds.Warm(t.Context(), "Panthera leo")
+		close(done)
+	}()
+
+	select {
+	case <-done:
+	case <-time.After(2 * time.Second):
+		t.Fatal("Warm waited for the source")
+	}
+	close(g.release)
+}
+
+func TestSounds_SharesOneLookupBetweenPlayers(t *testing.T) {
+	t.Parallel()
+
+	g := newGate()
+	sounds := species.NewSounds(quietLogger(), g)
+
+	var wg sync.WaitGroup
+	for range 10 {
+		wg.Go(func() { sounds.Sound(t.Context(), "Panthera leo") })
+	}
+	<-g.started
+	close(g.release)
+	wg.Wait()
+
+	assert.Equal(t, 1, g.asked(), "ten players at once are one question to a rate-limited service")
+}
+
+func TestSounds_WarmingTheWarmIsFree(t *testing.T) {
+	t.Parallel()
+
+	stub := &soundsStub{found: false}
+	sounds, _ := newSounds(stub)
+
+	sounds.Sound(t.Context(), "Acinonyx jubatus")
+	sounds.Warm(t.Context(), "Acinonyx jubatus")
+	sounds.Warm(t.Context(), "")
+
+	assert.Equal(t, 1, stub.asked("Acinonyx jubatus"))
+}
