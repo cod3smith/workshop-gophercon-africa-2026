@@ -978,6 +978,23 @@ func TestRecord_ShowsEverythingTheRecordHolds(t *testing.T) {
 // half of one, so the unfinished case is the common one on a first visit.
 // Claiming an absence there tells the reader something false, and a reload
 // then plays the sound it said did not exist.
+// TestMasthead_OffersEveryDestination pins the thing that made the site
+// feel like a dead end: the globe and the record pages existed but nothing
+// linked to them, so the masthead admitted to only two of the three places
+// you can go.
+func TestMasthead_OffersEveryDestination(t *testing.T) {
+	t.Parallel()
+
+	html := renderRecord(t, pages.RecordProps{Sighting: sighting.Sighting{ID: uuid.New()}})
+
+	for _, want := range []string{`href="/"`, `href="/globe"`, `href="/play"`} {
+		assert.Contains(t, html, want)
+	}
+	// The record page is none of the three, so nothing is marked current,
+	// and the links that are not current carry no empty attribute either.
+	assert.NotContains(t, html, `aria-current=""`)
+}
+
 func TestRecord_SaysNothingAboutAnUnfinishedLookup(t *testing.T) {
 	t.Parallel()
 

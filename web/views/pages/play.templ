@@ -11,6 +11,7 @@ import (
 // earth they think the animal was.
 templ Question(props QuestionProps) {
 	@layout.Base(layout.BaseProps{
+		Here:        "/play",
 		Title:       roundLabel(props.Game.Round + 1),
 		Description: "Look at the animal. Guess where on earth it was seen. Five rounds, 25,000 points.",
 		Map:         true,
@@ -198,6 +199,7 @@ templ welcome() {
 // animal turned out to be.
 templ Answer(props AnswerProps) {
 	@layout.Base(layout.BaseProps{
+		Here:        "/play",
 		Title:       verdict(props.Result.DistanceKm),
 		Description: "Look at the animal. Guess where on earth it was seen. Five rounds, 25,000 points.",
 		Map:         true,
@@ -297,6 +299,7 @@ templ Answer(props AnswerProps) {
 // line they can paste anywhere.
 templ Over(props OverProps) {
 	@layout.Base(layout.BaseProps{
+		Here:        "/play",
 		Title:       "Final score",
 		Description: "Look at the animal. Guess where on earth it was seen. Five rounds, 25,000 points.",
 		// Leaflet is only worth its weight when there is somewhere to put

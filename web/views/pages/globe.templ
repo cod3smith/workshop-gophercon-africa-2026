@@ -12,6 +12,7 @@ import "workshop/web/views/layout"
 // and opens the same card a click on the point opens.
 templ Globe(props GlobeProps) {
 	@layout.Base(layout.BaseProps{
+		Here:        "/globe",
 		Title:       "The globe",
 		Description: props.globeDescription(),
 		Globe:       true,

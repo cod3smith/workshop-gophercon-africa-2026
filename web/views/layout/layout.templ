@@ -20,6 +20,20 @@ type BaseProps struct {
 	// opt-in, and off wherever the page is working: the game never sets it,
 	// because attention there belongs to the photograph and the map.
 	FooterGopher bool
+	// Here is the path of the page being rendered, so the masthead can mark
+	// which of its links you are already on. Empty on a page that is on
+	// none of them, such as an error.
+	Here string
+}
+
+// current marks the link to the page you are already looking at. Screen
+// readers announce it, and the stylesheet has something to hold on to.
+// Every other link gets no attribute at all rather than an empty one.
+func current(here, path string) templ.Attributes {
+	if here == path {
+		return templ.Attributes{"aria-current": "page"}
+	}
+	return nil
 }
 
 templ Base(props BaseProps) {
@@ -63,8 +77,9 @@ templ Base(props BaseProps) {
 					</span>
 				</a>
 				<nav class="nav" aria-label="Main">
-					<a href="/">The record</a>
-					<a class="nav__cta" href="/play">Play</a>
+					<a href="/" { current(props.Here, "/")... }>The record</a>
+					<a href="/globe" { current(props.Here, "/globe")... }>The globe</a>
+					<a class="nav__cta" href="/play" { current(props.Here, "/play")... }>Play</a>
 				</nav>
 			</header>
 			<main id="main" class="container">

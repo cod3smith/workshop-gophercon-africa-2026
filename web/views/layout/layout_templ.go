@@ -28,6 +28,20 @@ type BaseProps struct {
 	// opt-in, and off wherever the page is working: the game never sets it,
 	// because attention there belongs to the photograph and the map.
 	FooterGopher bool
+	// Here is the path of the page being rendered, so the masthead can mark
+	// which of its links you are already on. Empty on a page that is on
+	// none of them, such as an error.
+	Here string
+}
+
+// current marks the link to the page you are already looking at. Screen
+// readers announce it, and the stylesheet has something to hold on to.
+// Every other link gets no attribute at all rather than an empty one.
+func current(here, path string) templ.Attributes {
+	if here == path {
+		return templ.Attributes{"aria-current": "page"}
+	}
+	return nil
 }
 
 func Base(props BaseProps) templ.Component {
@@ -58,7 +72,7 @@ func Base(props BaseProps) templ.Component {
 		var templ_7745c5c3_Var2 string
 		templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.JoinStringErrs(props.Title)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/views/layout/layout.templ`, Line: 31, Col: 23}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/views/layout/layout.templ`, Line: 45, Col: 23}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var2))
 		if templ_7745c5c3_Err != nil {
@@ -71,7 +85,7 @@ func Base(props BaseProps) templ.Component {
 		var templ_7745c5c3_Var3 string
 		templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.ResolveAttributeValue(props.Description)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/views/layout/layout.templ`, Line: 32, Col: 55}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/views/layout/layout.templ`, Line: 46, Col: 55}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var3)
 		if templ_7745c5c3_Err != nil {
@@ -84,7 +98,7 @@ func Base(props BaseProps) templ.Component {
 		var templ_7745c5c3_Var4 string
 		templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.ResolveAttributeValue(props.Title)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/views/layout/layout.templ`, Line: 35, Col: 50}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/views/layout/layout.templ`, Line: 49, Col: 50}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var4)
 		if templ_7745c5c3_Err != nil {
@@ -97,7 +111,7 @@ func Base(props BaseProps) templ.Component {
 		var templ_7745c5c3_Var5 string
 		templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.ResolveAttributeValue(props.Description)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/views/layout/layout.templ`, Line: 36, Col: 62}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/views/layout/layout.templ`, Line: 50, Col: 62}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var5)
 		if templ_7745c5c3_Err != nil {
@@ -143,7 +157,31 @@ func Base(props BaseProps) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "<span class=\"brand__name\">Sightings <em>Safari</em></span></a><nav class=\"nav\" aria-label=\"Main\"><a href=\"/\">The record</a> <a class=\"nav__cta\" href=\"/play\">Play</a></nav></header><main id=\"main\" class=\"container\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "<span class=\"brand__name\">Sightings <em>Safari</em></span></a><nav class=\"nav\" aria-label=\"Main\"><a href=\"/\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templ.RenderAttributes(ctx, templ_7745c5c3_Buffer, current(props.Here, "/"))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, ">The record</a> <a href=\"/globe\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templ.RenderAttributes(ctx, templ_7745c5c3_Buffer, current(props.Here, "/globe"))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, ">The globe</a> <a class=\"nav__cta\" href=\"/play\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templ.RenderAttributes(ctx, templ_7745c5c3_Buffer, current(props.Here, "/play"))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, ">Play</a></nav></header><main id=\"main\" class=\"container\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -151,12 +189,12 @@ func Base(props BaseProps) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "</main>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 14, "</main>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		if props.FooterGopher {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "<div class=\"gopher-lane gopher-lane--footer\" aria-hidden=\"true\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 15, "<div class=\"gopher-lane gopher-lane--footer\" aria-hidden=\"true\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -164,28 +202,28 @@ func Base(props BaseProps) templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, "</div>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 16, "</div>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 14, "<footer class=\"footer\"><p>Occurrence records from <a href=\"https://www.gbif.org\" rel=\"noopener\">GBIF</a>, weather from <a href=\"https://open-meteo.com\" rel=\"noopener\">Open-Meteo</a>. Photographs belong to the naturalists credited beside them.</p><p class=\"footer__built\">Built in Go with sqlc and templ · GopherCon Africa 2026</p></footer>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 17, "<footer class=\"footer\"><p>Occurrence records from <a href=\"https://www.gbif.org\" rel=\"noopener\">GBIF</a>, weather from <a href=\"https://open-meteo.com\" rel=\"noopener\">Open-Meteo</a>. Photographs belong to the naturalists credited beside them.</p><p class=\"footer__built\">Built in Go with sqlc and templ · GopherCon Africa 2026</p></footer>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		if props.Map {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 15, "<script src=\"https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js\" integrity=\"sha512-puJW3E/qXDqYp9IfhAI54BJEaWIfloJ7JWs7OeD5i6ruC9JZL1gERT1wjtwXFlh7CjE7ZJ+/vcRZRkIYIb6p4g==\" crossorigin=\"anonymous\" referrerpolicy=\"no-referrer\" defer></script> <!-- After Leaflet: deferred scripts run in document order. --> <script src=\"/assets/js/safari.js\" defer></script>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 18, "<script src=\"https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js\" integrity=\"sha512-puJW3E/qXDqYp9IfhAI54BJEaWIfloJ7JWs7OeD5i6ruC9JZL1gERT1wjtwXFlh7CjE7ZJ+/vcRZRkIYIb6p4g==\" crossorigin=\"anonymous\" referrerpolicy=\"no-referrer\" defer></script> <!-- After Leaflet: deferred scripts run in document order. --> <script src=\"/assets/js/safari.js\" defer></script>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 		}
 		if props.Globe {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 16, "<!--\n\t\t\t\t\tr160 is the last three.js that ships a build with a global THREE,\n\t\t\t\t\twhich is what a site with no bundler can use. Pinned to the exact\n\t\t\t\t\tversion with its hash, as Leaflet is: a script this size, from\n\t\t\t\t\tsomebody else's server, should not be able to change under us.\n\t\t\t\t--> <script src=\"https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.min.js\" integrity=\"sha512-vnmn/Qqn6aG0POAc9mIGzjq0IybrvxJXYDafNvp9JSnDGxeF3pbkSqLvf+YGd5ku63pT7sa/jxHn7/d0mU8+tA==\" crossorigin=\"anonymous\" referrerpolicy=\"no-referrer\" defer></script> <!-- After three.js: deferred scripts run in document order. --> <script src=\"/assets/js/globe.js\" defer></script>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 19, "<!--\n\t\t\t\t\tr160 is the last three.js that ships a build with a global THREE,\n\t\t\t\t\twhich is what a site with no bundler can use. Pinned to the exact\n\t\t\t\t\tversion with its hash, as Leaflet is: a script this size, from\n\t\t\t\t\tsomebody else's server, should not be able to change under us.\n\t\t\t\t--> <script src=\"https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.min.js\" integrity=\"sha512-vnmn/Qqn6aG0POAc9mIGzjq0IybrvxJXYDafNvp9JSnDGxeF3pbkSqLvf+YGd5ku63pT7sa/jxHn7/d0mU8+tA==\" crossorigin=\"anonymous\" referrerpolicy=\"no-referrer\" defer></script> <!-- After three.js: deferred scripts run in document order. --> <script src=\"/assets/js/globe.js\" defer></script>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 17, "<script src=\"/assets/js/app.js\" defer></script></body></html>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 20, "<script src=\"/assets/js/app.js\" defer></script></body></html>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -216,7 +254,7 @@ func logo() templ.Component {
 			templ_7745c5c3_Var8 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 18, "<svg class=\"logo\" viewBox=\"0 0 32 32\" aria-hidden=\"true\" focusable=\"false\"><circle cx=\"16\" cy=\"16\" r=\"15\" class=\"logo__disc\"></circle> <path class=\"logo__grass\" d=\"M3 29c2-6 4-9 6-11 0 5-1 8-2 11M9 29c1-8 3-12 6-15-1 7-2 11-3 15M16 29c0-9 2-14 5-18 0 8-1 13-2 18M23 29c1-6 3-10 6-13-1 6-2 9-3 13\"></path> <ellipse cx=\"16\" cy=\"13\" rx=\"8\" ry=\"5\" class=\"logo__eye\"></ellipse> <circle cx=\"16\" cy=\"13\" r=\"2.6\" class=\"logo__pupil\"></circle></svg>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 21, "<svg class=\"logo\" viewBox=\"0 0 32 32\" aria-hidden=\"true\" focusable=\"false\"><circle cx=\"16\" cy=\"16\" r=\"15\" class=\"logo__disc\"></circle> <path class=\"logo__grass\" d=\"M3 29c2-6 4-9 6-11 0 5-1 8-2 11M9 29c1-8 3-12 6-15-1 7-2 11-3 15M16 29c0-9 2-14 5-18 0 8-1 13-2 18M23 29c1-6 3-10 6-13-1 6-2 9-3 13\"></path> <ellipse cx=\"16\" cy=\"13\" rx=\"8\" ry=\"5\" class=\"logo__eye\"></ellipse> <circle cx=\"16\" cy=\"13\" r=\"2.6\" class=\"logo__pupil\"></circle></svg>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
