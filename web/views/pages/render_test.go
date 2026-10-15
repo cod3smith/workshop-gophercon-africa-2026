@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"regexp"
+	"strings"
 	"testing"
 	"time"
 	"uuid"
@@ -320,4 +321,112 @@ func TestCredit(t *testing.T) {
 			assert.Equal(t, test.want, pages.Credit(test.media, test.scientificName))
 		})
 	}
+}
+
+// finished returns a complete game over Rounds sightings, scored from the
+// given distances, and the sightings keyed as the handler supplies them.
+func finished(distances []float64) (game.Game, map[uuid.UUID]sighting.Sighting) {
+	ids := make([]uuid.UUID, len(distances))
+	played := make(map[uuid.UUID]sighting.Sighting, len(distances))
+	for i := range distances {
+		ids[i] = uuid.New()
+
+		s := sighting.Sighting{
+			ID:       ids[i],
+			Location: sighting.Location{Locality: "Nairobi", Coordinates: sighting.Coordinates{Latitude: -1.29, Longitude: 36.82}},
+		}
+		s.Species.VernacularName = "plains zebra"
+		played[ids[i]] = s
+	}
+
+	g := game.New(ids)
+	for _, km := range distances {
+		guess := sighting.Coordinates{Latitude: 10, Longitude: 20}
+		g.Record(game.Result{DistanceKm: km, Points: game.ScoreFor(km), Guess: &guess})
+	}
+	return g, played
+}
+
+func renderOver(t *testing.T, props pages.OverProps) string {
+	t.Helper()
+
+	var buf bytes.Buffer
+	require.NoError(t, pages.Over(props).Render(context.Background(), &buf))
+	return buf.String()
+}
+
+func TestOver_SharesAnAddressThatCanBeFollowed(t *testing.T) {
+	t.Parallel()
+
+	g, played := finished([]float64{7.2, 900, 3000, 6000, 9000})
+	html := renderOver(t, pages.OverProps{Game: g, Sightings: played, URL: "https://safari.example.test/play"})
+
+	// The share block is the only thing designed to spread the game, and a
+	// result pasted into Slack with no address cannot be acted on.
+	share := regexp.MustCompile(`(?s)<pre[^>]*id="share-text"[^>]*>(.*?)</pre>`).FindStringSubmatch(html)
+	require.Len(t, share, 2, "the page should carry the share block")
+	assert.Contains(t, share[1], "https://safari.example.test/play")
+}
+
+func TestOver_NamesTheBestRound(t *testing.T) {
+	t.Parallel()
+
+	g, played := finished([]float64{3000, 900, 7.2, 6000, 9000})
+	html := renderOver(t, pages.OverProps{Game: g, Sightings: played, URL: "https://safari.example.test/play"})
+
+	best := regexp.MustCompile(`(?s)<p[^>]*class="final__best[^"]*"[^>]*>(.*?)</p>`).FindStringSubmatch(html)
+	require.Len(t, best, 2, "the best round should be headlined")
+	assert.Contains(t, best[1], "Your best")
+	assert.Contains(t, best[1], "Plains zebra")
+	assert.Contains(t, best[1], "7.2 km out")
+	assert.Contains(t, best[1], "round 3", "the player should be able to find it in the list")
+
+	assert.Less(t, regexp.MustCompile(`class="final__best`).FindStringIndex(html)[0],
+		regexp.MustCompile(`class="rounds"`).FindStringIndex(html)[0], "the headline comes above the rounds list")
+}
+
+func TestOver_HasNoBestRoundWhenNothingWasScored(t *testing.T) {
+	t.Parallel()
+
+	html := renderOver(t, pages.OverProps{Game: game.New(nil)})
+
+	assert.NotContains(t, html, "final__best")
+}
+
+func TestOver_MapsTheFivePlacesButReadsWithoutIt(t *testing.T) {
+	t.Parallel()
+
+	g, played := finished([]float64{7.2, 900, 3000, 6000, 9000})
+	html := renderOver(t, pages.OverProps{Game: g, Sightings: played, URL: "https://safari.example.test/play"})
+
+	box := regexp.MustCompile(`<div[^>]*data-safari-map[^>]*>`).FindString(html)
+	require.NotEmpty(t, box, "the five places should be on a map")
+
+	// Without Leaflet the box would be an empty panel, so it ships hidden
+	// and safari.js reveals it only once there is a map to draw.
+	assert.Contains(t, box, "hidden")
+
+	data := regexp.MustCompile(`(?s)<script id="safari-map"[^>]*>(.*?)</script>`).FindStringSubmatch(html)
+	require.Len(t, data, 2)
+	assert.Contains(t, data[1], `"mode":"final"`)
+	assert.Equal(t, game.Rounds, strings.Count(data[1], `"answer"`), "one true position per round")
+	assert.Equal(t, game.Rounds, strings.Count(data[1], `"guess"`), "one guess per round")
+
+	assert.Contains(t, html, "leaflet", "the page that draws a map has to load Leaflet")
+
+	// The list carries the same places as text, which is the fallback.
+	assert.Equal(t, game.Rounds, strings.Count(html, "Nairobi</span>"), "every place is also named in the rounds list")
+}
+
+func TestOver_MapsARoundWhoseGuessWasNotKept(t *testing.T) {
+	t.Parallel()
+
+	g, played := finished([]float64{7.2, 900, 3000, 6000, 9000})
+	g.Results[1].Guess = nil
+	html := renderOver(t, pages.OverProps{Game: g, Sightings: played})
+
+	data := regexp.MustCompile(`(?s)<script id="safari-map"[^>]*>(.*?)</script>`).FindStringSubmatch(html)
+	require.Len(t, data, 2)
+	assert.Equal(t, game.Rounds, strings.Count(data[1], `"answer"`))
+	assert.Equal(t, game.Rounds-1, strings.Count(data[1], `"guess"`), "a missing guess is left off, not drawn at 0,0")
 }

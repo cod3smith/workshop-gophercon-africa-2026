@@ -52,13 +52,17 @@
 	const moss = style.getPropertyValue("--moss").trim() || "#5fb37a";
 	const ink = style.getPropertyValue("--ink").trim() || "#0b100e";
 
-	// The fallback paragraph has done its job once Leaflet is here.
+	// The fallback paragraph has done its job once Leaflet is here. A box
+	// that ships hidden (the finished game's, whose list already says all
+	// of this in words) is shown only now there is a map to put in it, and
+	// before Leaflet measures it.
 	box.textContent = "";
+	box.hidden = false;
 
 	const map = L.map(box, {
 		minZoom: 1,
 		worldCopyJump: true,
-		zoomControl: data.mode === "guess",
+		zoomControl: data.mode !== "answer",
 	});
 
 	L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
@@ -87,6 +91,8 @@
 
 	if (data.mode === "answer") {
 		showAnswer();
+	} else if (data.mode === "final") {
+		showFinal();
 	} else {
 		takeGuess();
 	}
@@ -110,6 +116,44 @@
 		map.dragging.disable();
 		map.scrollWheelZoom.disable();
 		map.doubleClickZoom.disable();
+	}
+
+	// showFinal draws every round of a finished game: where each animal
+	// really was, numbered as in the list beside it, and the pin the player
+	// put against it. A line joins the two, so the five misses and the near
+	// hits can be read at a glance. The map stays draggable, because five
+	// places can be a continent apart.
+	function showFinal() {
+		const points = [];
+
+		data.rounds.forEach((round) => {
+			const answer = L.latLng(round.answer.lat, round.answer.lng);
+			points.push(answer);
+
+			// The guess is optional: a game begun before guesses were kept
+			// has only its answers to show.
+			if (round.guess) {
+				const guess = L.latLng(round.guess.lat, round.guess.lng);
+				points.push(guess);
+
+				L.polyline([guess, answer], {
+					color: gold,
+					weight: 2,
+					opacity: 0.6,
+					dashArray: "5 7",
+				}).addTo(map);
+				pin(guess, gold).addTo(map).bindTooltip(label(round.guess.label));
+			}
+
+			// The number is permanent so the dot can be matched to its row;
+			// the animal and place are a click away.
+			pin(answer, moss)
+				.addTo(map)
+				.bindTooltip(label(String(round.n)), { permanent: true, direction: "top", offset: [0, -6] })
+				.bindPopup(label(round.answer.label));
+		});
+
+		map.fitBounds(L.latLngBounds(points).pad(0.25));
 	}
 
 	// takeGuess lets the player drop a pin, and hands its position to the

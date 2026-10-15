@@ -234,7 +234,10 @@ templ Over(props OverProps) {
 	@layout.Base(layout.BaseProps{
 		Title:       "Final score",
 		Description: "Look at the animal. Guess where on earth it was seen. Five rounds, 25,000 points.",
-		Class:       "is-playing",
+		// Leaflet is only worth its weight when there is somewhere to put
+		// a pin: the rounds list says the same things as text without it.
+		Map:   len(finalMap(props).Rounds) > 0,
+		Class: "is-playing",
 	}) {
 		<section class={ "final", gameTone(props.Game) }>
 			<p class="final__eyebrow">{ game.Name }</p>
@@ -243,6 +246,9 @@ templ Over(props OverProps) {
 				<span class="final__max">/ { thousands(game.MaxScore) }</span>
 			</p>
 			<h1 class="final__rank">{ props.Game.Rank() }</h1>
+			if best := props.bestLine(); best != "" {
+				<p class={ "final__best", props.bestTone() }>{ best }</p>
+			}
 			<ol class="rounds">
 				for i, result := range props.Game.Results {
 					<li class={ "rounds__row", tone(result.Points) }>
@@ -264,9 +270,18 @@ templ Over(props OverProps) {
 					</li>
 				}
 			</ol>
+			if len(finalMap(props).Rounds) > 0 {
+				<!--
+					Ships hidden: without Leaflet this would be an empty panel, and the
+					list above already names every place. safari.js reveals it once
+					there is a map to draw.
+				-->
+				<div class="map map--final" data-safari-map="safari-map" role="img" aria-label="Where each animal was seen, with your guess beside it" hidden></div>
+				@templ.JSONScript("safari-map", finalMap(props))
+			}
 			<div class="share">
 				<h2 class="share__title">Brag about it</h2>
-				<pre class="share__text" id="share-text">{ props.Game.Share() }</pre>
+				<pre class="share__text" id="share-text">{ props.Game.Share(props.URL) }</pre>
 				<button class="button" type="button" data-copy="share-text">Copy result</button>
 			</div>
 			<div class="final__actions">

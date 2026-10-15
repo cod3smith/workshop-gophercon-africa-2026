@@ -2,6 +2,7 @@ package game_test
 
 import (
 	"math"
+	"strings"
 	"testing"
 	"uuid"
 	"workshop/internal/domain/game"
@@ -80,6 +81,15 @@ func TestScore(t *testing.T) {
 		assert.InDelta(t, 0, got.DistanceKm, 0.001)
 		assert.Equal(t, game.MaxRoundScore, got.Points)
 	})
+
+	t.Run("Keeps the guess, so the ending can map it", func(t *testing.T) {
+		guess := at(t, 51.5074, -0.1278)
+
+		got := game.Score(guess, answer)
+
+		require.NotNil(t, got.Guess)
+		assert.Equal(t, guess, *got.Guess)
+	})
 }
 
 // newGame returns a game over Rounds throwaway sightings.
@@ -156,7 +166,7 @@ func TestGame_Share(t *testing.T) {
 		g.Record(game.Result{Points: game.MaxRoundScore})
 	}
 
-	share := g.Share()
+	share := g.Share("https://example.test/play")
 
 	assert.Contains(t, share, "25,000", "the share line carries the total, grouped")
 	assert.Contains(t, share, game.Name)
@@ -164,6 +174,69 @@ func TestGame_Share(t *testing.T) {
 	for _, r := range g.Results {
 		assert.NotEmpty(t, game.Medal(r.Points))
 	}
+}
+
+func TestGame_Share_CarriesTheURL(t *testing.T) {
+	g := newGame()
+	g.Record(game.Result{Points: 4100})
+	g.Record(game.Result{Points: 300})
+
+	lines := strings.Split(g.Share("https://example.test/play"), "\n")
+
+	// On a line of its own, so a chat client links it without swallowing
+	// the squares or a trailing character into the address.
+	require.Len(t, lines, 3)
+	assert.Equal(t, "https://example.test/play", lines[2])
+	assert.Equal(t, game.Medal(4100)+game.Medal(300), lines[1], "the squares still come before the address")
+}
+
+func TestGame_Best(t *testing.T) {
+	t.Run("Names the highest-scoring round and where it fell", func(t *testing.T) {
+		g := newGame()
+		for _, points := range []int{1200, 300, 4976, 4000, 0} {
+			g.Record(game.Result{DistanceKm: float64(points), Points: points})
+		}
+
+		r, i, ok := g.Best()
+
+		assert.True(t, ok)
+		assert.Equal(t, 4976, r.Points)
+		assert.Equal(t, 2, i)
+	})
+
+	t.Run("Takes the earliest round when two tie", func(t *testing.T) {
+		g := newGame()
+		g.Record(game.Result{Points: 900})
+		g.Record(game.Result{Points: 900})
+
+		_, i, _ := g.Best()
+
+		assert.Equal(t, 0, i)
+	})
+
+	t.Run("Is false for a game with no scored rounds", func(t *testing.T) {
+		_, _, ok := game.Game{}.Best()
+
+		assert.False(t, ok)
+	})
+}
+
+func TestGame_Rank_IsNeverAPutDown(t *testing.T) {
+	for _, banned := range []string{"Hopeless", "Lost in the Bush"} {
+		for _, total := range []int{0, 1500, 6000, 12000, 18000, 22500, game.MaxScore} {
+			g := game.Game{Results: []game.Result{{Points: total}}}
+			assert.NotContains(t, g.Rank(), banned, "a total of %d should not be told it is hopeless", total)
+		}
+	}
+}
+
+func TestGame_Rank_EveryBandHasItsOwnName(t *testing.T) {
+	seen := map[string]int{}
+	for _, total := range []int{0, 1499, 1500, 5999, 6000, 11999, 12000, 17999, 18000, 22499, 22500, game.MaxScore} {
+		seen[(game.Game{Results: []game.Result{{Points: total}}}).Rank()]++
+	}
+
+	assert.Len(t, seen, 6, "six bands should read as six different titles")
 }
 
 func TestGame_Rank(t *testing.T) {

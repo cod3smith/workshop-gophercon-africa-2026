@@ -35,6 +35,9 @@ type (
 		// Sightings is keyed by sighting id, so a round names the animal it
 		// was actually drawn against rather than whatever is at its index.
 		Sightings map[uuid.UUID]sighting.Sighting
+		// URL is the address the share line sends people to, built from the
+		// request so it is right wherever the game is served from.
+		URL string
 	}
 )
 
@@ -45,6 +48,15 @@ type (
 		Mode   string    `json:"mode"`
 		Guess  *MapPoint `json:"guess,omitempty"`
 		Answer *MapPoint `json:"answer,omitempty"`
+		// Rounds is every round of a finished game, for the "final" mode.
+		Rounds []MapRound `json:"rounds,omitempty"`
+	}
+	// MapRound is one round of a finished game on the map: the true
+	// position, and the guess when the game kept one.
+	MapRound struct {
+		N      int       `json:"n"`
+		Guess  *MapPoint `json:"guess,omitempty"`
+		Answer MapPoint  `json:"answer"`
 	}
 	// MapPoint is one marker on that map.
 	MapPoint struct {
@@ -74,6 +86,57 @@ func answerMap(props AnswerProps) MapData {
 		Guess:  &MapPoint{Lat: props.Guess.Latitude, Lng: props.Guess.Longitude, Label: "Your guess"},
 		Answer: &MapPoint{Lat: props.Sighting.Location.Latitude, Lng: props.Sighting.Location.Longitude, Label: place(props.Sighting.Location)},
 	}
+}
+
+// finalMap is the five places the player looked at, each with the guess
+// they made at it. A round whose sighting is no longer there to place is
+// left off rather than drawn at nowhere, and one whose guess was not kept
+// is drawn as an answer alone.
+func finalMap(props OverProps) MapData {
+	data := MapData{Mode: "final"}
+
+	for i, result := range props.Game.Results {
+		s, ok := props.played(i)
+		if !ok {
+			continue
+		}
+
+		round := MapRound{
+			N: i + 1,
+			Answer: MapPoint{
+				Lat:   s.Location.Latitude,
+				Lng:   s.Location.Longitude,
+				Label: fmt.Sprintf("%d. %s, %s", i+1, speciesName(s), place(s.Location)),
+			},
+		}
+		if result.Guess != nil {
+			round.Guess = &MapPoint{Lat: result.Guess.Latitude, Lng: result.Guess.Longitude, Label: fmt.Sprintf("Your pin for %d", i+1)}
+		}
+		data.Rounds = append(data.Rounds, round)
+	}
+
+	return data
+}
+
+// bestLine states the player's best round in words, so the ending names a
+// good moment rather than only a total. It is empty when nothing was scored.
+func (p OverProps) bestLine() string {
+	result, i, ok := p.Game.Best()
+	if !ok {
+		return ""
+	}
+
+	if name := p.playedName(i); name != "" {
+		return fmt.Sprintf("Your best: %s, %s (round %d)", name, distanceLabel(result.DistanceKm), i+1)
+	}
+	return fmt.Sprintf("Your best: round %d, %s", i+1, distanceLabel(result.DistanceKm))
+}
+
+// bestTone is the tone of the best round, so its colour agrees with the
+// distance it states.
+func (p OverProps) bestTone() string {
+	result, _, _ := p.Game.Best()
+	return tone(result.Points)
 }
 
 // photo is the image a round is played on.

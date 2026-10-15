@@ -44,7 +44,7 @@ func Play(logger *slog.Logger, games GameService, session Session) http.HandlerF
 				played = nil
 			}
 
-			render(ctx, w, logger, pages.Over(pages.OverProps{Game: g, Sightings: played}))
+			render(ctx, w, logger, pages.Over(pages.OverProps{Game: g, Sightings: played, URL: shareURL(r)}))
 			return
 		}
 
@@ -66,6 +66,19 @@ func Play(logger *slog.Logger, games GameService, session Session) http.HandlerF
 
 		render(ctx, w, logger, pages.Question(pages.QuestionProps{Game: g, Sighting: sight}))
 	}
+}
+
+// shareURL is where a shared result sends people: the game, on the host the
+// player reached it by. The scheme comes from the proxy's header when there
+// is one, because a TLS terminator in front of the app makes every request
+// look like plain http to it. Both values are only ever echoed back to the
+// player who sent them.
+func shareURL(r *http.Request) string {
+	scheme := "http"
+	if r.TLS != nil || r.Header.Get("X-Forwarded-Proto") == "https" {
+		scheme = "https"
+	}
+	return scheme + "://" + r.Host + "/play"
 }
 
 // NewGame throws away whatever the player had and starts them a fresh game.

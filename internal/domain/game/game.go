@@ -47,6 +47,13 @@ const decayKm = 1500
 type Result struct {
 	DistanceKm float64 `json:"distanceKm"`
 	Points     int     `json:"points"`
+
+	// Guess is where the player put their pin, kept so the finished game
+	// can show all five guesses beside the five answers. It is nil on a
+	// result recorded without one, such as a game begun before guesses
+	// were kept, which the ending draws without a guess rather than with
+	// one at 0,0.
+	Guess *sighting.Coordinates `json:"guess,omitempty"`
 }
 
 // Game is a run of Rounds sightings and how the player has done so far.
@@ -86,6 +93,23 @@ func (g Game) Total() int {
 	return total
 }
 
+// Best is the round the player did best at, and its zero-based index, so
+// the ending can name a good moment rather than only a total. When rounds
+// tie the earliest wins. It is false when no round has been scored.
+func (g Game) Best() (Result, int, bool) {
+	if len(g.Results) == 0 {
+		return Result{}, 0, false
+	}
+
+	best := 0
+	for i, r := range g.Results {
+		if r.Points > g.Results[best].Points {
+			best = i
+		}
+	}
+	return g.Results[best], best, true
+}
+
 // Record scores the round the player is on and moves to the next one.
 // A game with nothing left to play is left alone, so a replayed form
 // submission can't score a sixth round.
@@ -102,7 +126,7 @@ func (g *Game) Record(r Result) {
 // actually seen.
 func Score(guess, answer sighting.Coordinates) Result {
 	km := Distance(guess, answer)
-	return Result{DistanceKm: km, Points: ScoreFor(km)}
+	return Result{DistanceKm: km, Points: ScoreFor(km), Guess: &guess}
 }
 
 // ScoreFor returns the points a guess that far from the answer earns.
@@ -153,9 +177,9 @@ func (g Game) Rank() string {
 	case total >= 6000:
 		return "Keen Amateur"
 	case total >= 1500:
-		return "Lost in the Bush"
+		return "Getting Warmer"
 	default:
-		return "Hopelessly Lost"
+		return "Scenic Route Specialist"
 	}
 }
 
@@ -173,16 +197,20 @@ func Medal(points int) string {
 	}
 }
 
-// Share is the result as a line the player can paste anywhere: the score,
-// then a square per round, which gives away how they did without giving
-// away a single answer.
-func (g Game) Share() string {
+// Share is the result as a few lines the player can paste anywhere: the
+// score, then a square per round, which gives away how they did without
+// giving away a single answer, then the address to play it at.
+//
+// The address is the point of sharing: pasted into a chat with no link, a
+// result is something nobody who reads it can act on. It sits on its own
+// line so a chat client links all of it and nothing else.
+func (g Game) Share(url string) string {
 	var squares strings.Builder
 	for _, r := range g.Results {
 		squares.WriteString(Medal(r.Points))
 	}
 
-	return fmt.Sprintf("%s %s/%s — %s\n%s", Name, group(g.Total()), group(MaxScore), g.Rank(), squares.String())
+	return fmt.Sprintf("%s %s/%s — %s\n%s\n%s", Name, group(g.Total()), group(MaxScore), g.Rank(), squares.String(), url)
 }
 
 // group puts separators in a number, so a score pasted into a chat reads

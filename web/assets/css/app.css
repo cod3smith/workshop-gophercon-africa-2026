@@ -786,6 +786,15 @@ a:hover {
 	cursor: default;
 }
 
+/* Five places and five guesses can be a continent apart, so it is a little
+   taller than the single-round answer map. It sits under the list of
+   rounds and above the share block, with the list's own spacing. */
+.map--final {
+	aspect-ratio: 16 / 10;
+	margin-bottom: 2.5rem;
+	cursor: grab;
+}
+
 .mapframe {
 	position: relative;
 }
@@ -1049,12 +1058,23 @@ a:hover {
 }
 
 .final__rank {
-	margin: 0.6rem 0 2.5rem;
+	margin: 0.6rem 0 1rem;
 	font-family: var(--display);
 	font-size: clamp(1.8rem, 5vw, 2.8rem);
 	font-weight: 500;
 	font-style: italic;
 	color: var(--tone, var(--paper));
+}
+
+/* The best moment, stated in the colour of how well it went. The number
+   and the distance beside it say the same thing, so the colour is never the
+   only carrier. */
+.final__best {
+	margin: 0 0 2.5rem;
+	color: var(--tone, var(--paper));
+	font-family: var(--mono);
+	font-size: 0.9rem;
+	letter-spacing: 0.04em;
 }
 
 .rounds {

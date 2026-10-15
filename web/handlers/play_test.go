@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"strconv"
 	"strings"
 	"testing"
 	"uuid"
@@ -225,4 +226,51 @@ func TestGuess(t *testing.T) {
 		assert.Equal(t, http.StatusSeeOther, rec.Code)
 		assert.Equal(t, "/play/new", rec.Header().Get("Location"))
 	})
+}
+
+// finishedGame plays every round of games and returns the cookie holding
+// the finished game.
+func finishedGame(t *testing.T, session handlers.Session, games fakeGames) *http.Cookie {
+	t.Helper()
+
+	cookie := begin(t, session, games)
+	for round := range game.Rounds {
+		rec := guess(t, session, games, cookie, strconv.Itoa(round), "-1.29", "36.82")
+		require.Equal(t, http.StatusOK, rec.Code)
+		cookie = rec.Result().Cookies()[0]
+	}
+	return cookie
+}
+
+func TestPlay_SharesTheAddressItWasReachedAt(t *testing.T) {
+	t.Parallel()
+
+	tests := map[string]struct {
+		header map[string]string
+		want   string
+	}{
+		"plain http":              {want: "http://safari.test/play"},
+		"behind a TLS terminator": {header: map[string]string{"X-Forwarded-Proto": "https"}, want: "https://safari.test/play"},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			session, games := handlers.NewSession(), gameOf()
+			cookie := finishedGame(t, session, games)
+
+			r := httptest.NewRequest(http.MethodGet, "http://safari.test/play", nil)
+			r.AddCookie(cookie)
+			for k, v := range test.header {
+				r.Header.Set(k, v)
+			}
+
+			rec := httptest.NewRecorder()
+			handlers.Play(quietLogger(), games, session)(rec, r)
+
+			require.Equal(t, http.StatusOK, rec.Code)
+			assert.Contains(t, rec.Body.String(), test.want, "the share line should carry the host the player used, not a hardcoded one")
+		})
+	}
 }
