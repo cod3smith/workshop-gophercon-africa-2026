@@ -57,6 +57,19 @@
 	display: none !important;
 }
 
+/* Text for assistive technology only: clipped, not removed, so it stays in
+   the accessibility tree where display:none would drop it. */
+.visually-hidden {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	margin: -1px;
+	padding: 0;
+	overflow: hidden;
+	clip-path: inset(50%);
+	white-space: nowrap;
+}
+
 html {
 	scroll-behavior: smooth;
 }
@@ -703,6 +716,13 @@ a:hover {
 	background: var(--ink);
 }
 
+/* Tabbing to a field or the map must not scroll it under the pinned bar
+   (WCAG 2.4.11), so reserve the bar's height below each of them. */
+.guess .map,
+.coords input {
+	scroll-margin-bottom: 7rem;
+}
+
 .guess__bar .field__readout {
 	flex: 1 1 12rem;
 	text-align: left;
@@ -1237,16 +1257,22 @@ a:hover {
 		text-align: left;
 	}
 
-	/* The rest of the instructions is for the keyboard and the typed
-	   fields, which the labels and the map's own description still cover. */
+	/* The keyboard detail is for assistive technology on a phone: clipped
+	   rather than display:none, so the map's description still carries it. */
 	.panel__hint-more {
-		display: none;
+		position: absolute;
+		width: 1px;
+		height: 1px;
+		margin: -1px;
+		overflow: hidden;
+		clip-path: inset(50%);
+		white-space: nowrap;
 	}
 
 	/* The masthead and scoreboard alone took a third of a phone screen,
 	   which pushed the photograph past the point where the map could share
 	   the view with it. */
-	.masthead {
+	.is-playing .masthead {
 		gap: 0.4rem 1rem;
 		padding-block: 0.6rem;
 	}
@@ -1269,6 +1295,11 @@ a:hover {
 	.guess .map {
 		aspect-ratio: 4 / 3;
 		min-height: 15rem;
+	}
+
+	.guess .map,
+	.coords input {
+		scroll-margin-bottom: 10rem;
 	}
 
 	/* The bar rides over the page, so it has to stay short enough to leave
@@ -1300,6 +1331,39 @@ a:hover {
 
 	.reveal__plate img {
 		aspect-ratio: 16 / 9;
+	}
+}
+
+/* A short viewport, such as a phone on its side: the pinned bar would
+   cross the map's top edge, so let it flow, and size the map to the height. */
+@media (max-height: 30rem) {
+	.guess__bar {
+		position: static;
+	}
+
+	.guess .map {
+		aspect-ratio: auto;
+		height: 60vh;
+		min-height: 12rem;
+	}
+}
+
+/* On its side a phone is wide and short, so the stacked order would push
+   the map off the screen. Put the evidence and the control side by side. */
+@media (max-height: 30rem) and (max-width: 60rem) {
+	.round {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		grid-template-areas:
+			"plate guess"
+			"panel guess";
+	}
+
+	.plate {
+		align-self: start;
+	}
+
+	.plate__photo {
+		max-height: 55vh;
 	}
 }
 

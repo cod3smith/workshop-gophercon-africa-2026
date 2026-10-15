@@ -24,6 +24,8 @@ templ Question(props QuestionProps) {
 		-->
 		<form class="round" method="post" action="/play/guess">
 			<input type="hidden" name="round" value={ strconv.Itoa(props.Game.Round) }/>
+			<!-- The clues follow the map in source order, after the submit button, so say so up front. -->
+			<p class="visually-hidden">The clues about this animal are listed after the map.</p>
 			<figure class="plate">
 				<img
 					class="plate__photo"
@@ -121,16 +123,18 @@ templ Question(props QuestionProps) {
 					}
 				</dl>
 				<!--
-					The first sentence is the whole instruction for a pointer. The rest
-					is for the keyboard and the typed fields, and a phone has little
-					room for it, so a narrow screen drops it (see .panel__hint-more).
+					The visible sentence names both ways to answer, a pointer and the
+					typed fields. The keyboard detail is clipped, not removed, on a
+					phone (see .panel__hint-more): display:none would drop it from the
+					map's accessible description, which cites this paragraph.
 				-->
 				<p class="panel__hint" id="map-help">
-					Click or tap the map to drop a pin where you think it was recorded.
+					Click or tap the map to drop a pin where you think it was recorded,
+					or type a latitude and longitude under the map.
 					<span class="panel__hint-more">
-						Or focus the map, pan with the arrow keys, and press Enter to place
-						one at the crosshair. Or type a latitude and longitude under the
-						map. The closer you are, the more it scores.
+						To use the keyboard, focus the map, pan with the arrow keys, and
+						press Enter to place a pin at the crosshair. The closer you are,
+						the more it scores.
 					</span>
 				</p>
 			</section>

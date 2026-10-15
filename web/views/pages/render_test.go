@@ -63,3 +63,29 @@ func TestQuestion_OffersAGuessWithoutTheMap(t *testing.T) {
 	require.NotEmpty(t, submit, "the form should carry the submit button")
 	assert.NotContains(t, submit, "disabled")
 }
+
+func TestQuestion_KeepsTheTypedRouteDescribedAndTheCluesAnnounced(t *testing.T) {
+	t.Parallel()
+
+	s := sighting.Sighting{
+		ID:    uuid.New(),
+		Media: []sighting.Media{{Type: "StillImage", URL: "https://example.org/animal.jpg"}},
+	}
+
+	var buf bytes.Buffer
+	err := pages.Question(pages.QuestionProps{Game: game.New([]uuid.UUID{s.ID}), Sighting: s}).Render(context.Background(), &buf)
+	require.NoError(t, err)
+	html := buf.String()
+
+	// The map cites this paragraph as its description, so the typed route
+	// has to be in its visible sentence, not in text a stylesheet can drop.
+	hint := regexp.MustCompile(`(?s)<p[^>]*id="map-help"[^>]*>(.*?)<span`).FindStringSubmatch(html)
+	require.Len(t, hint, 2, "the map's description paragraph should be present")
+	assert.Contains(t, hint[1], "type a latitude and longitude")
+
+	// The clues come after the submit button in source order, so a screen
+	// reader is told where they went before it reaches the button.
+	told := "The clues about this animal are listed after the map."
+	assert.Contains(t, html, told)
+	assert.Less(t, bytes.Index([]byte(html), []byte(told)), bytes.Index([]byte(html), []byte(`id="guess-submit"`)))
+}
