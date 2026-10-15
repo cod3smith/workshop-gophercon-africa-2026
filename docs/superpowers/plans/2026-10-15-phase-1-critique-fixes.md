@@ -540,3 +540,108 @@ Run `go tool templ generate ./web/... && go test ./web/views/pages/ -v`. Then lo
 ```bash
 git add web/ && git commit -m "refactor: offer the typed route without it crowding the map"
 ```
+
+### Task 9: Tell a first-timer how to play
+
+**Why:** `Help and documentation` scored 2/4 in both critiques and was the only
+heuristic that did not move. Nothing visible states the rules, and the share link
+lands a cold visitor on `/play` with no hero and no context.
+
+**Files:**
+- Modify: `web/views/pages/play.templ` (the `Question` view), `home.templ`
+- Modify: `web/assets/css/app.css`
+- Test: `web/views/pages/render_test.go`
+
+- [ ] **Step 1: Write the failing test**
+
+```go
+// The rules are stated where a first-timer will actually be.
+assert.Contains(t, html, "Five rounds")
+assert.Regexp(t, `5,?000`, html)   // what a perfect round is worth
+```
+
+- [ ] **Step 2: Run it and watch it fail**
+
+Run: `go test ./web/views/pages/ -v` — FAIL, the rules appear nowhere on `/play`.
+
+- [ ] **Step 3: State the rules on the round, once**
+
+One visible line near the round label: five rounds, closer scores more, up to
+5,000 a round. It must be visible to a sighted phone player, not clipped into a
+screen-reader-only span.
+
+- [ ] **Step 4: Greet a first-timer only**
+
+On round 1 of a fresh game, show a short dismissible panel naming the three ways
+to answer and what scores. Suppress it from round 2 onward — the game is already
+in a signed cookie, so `g.Round == 0` is the signal; no new state and no
+JavaScript required to decide it.
+
+- [ ] **Step 5: Give the home page a one-line "how it works"**
+
+Three steps beneath the hero CTA: look at the photograph, drop a pin, score by
+distance. This is the context a share link currently skips.
+
+- [ ] **Step 6: Verify and commit**
+
+Run `go tool templ generate ./web/... && go test ./... 2>&1 | grep -E "FAIL|^---"`,
+then load `/play/new` and confirm the greeting shows on round 1 and not round 2.
+
+```bash
+git add web/ && git commit -m "feat: tell a first-timer how the game works"
+```
+
+### Task 10: Gophers
+
+**Why:** it is GopherCon, the judge is a Go advocate, and the product has no
+moment of pure character. Requested by the owner.
+
+**Scope decision (the owner's brief, as interpreted):** gophers appear only where
+the page is quiet. **Not on the round screen** — the critique already found that
+screen crowded, and attention there belongs to the photograph and the map.
+
+**Files:**
+- Create: `web/views/components/gopher.templ` (drawn SVG, no emoji, no raster)
+- Modify: `web/views/pages/error.templ`, `home.templ`, `play.templ` (answer screen only)
+- Modify: `web/assets/css/app.css`
+- Test: `web/views/pages/render_test.go`
+
+- [ ] **Step 1: Write the failing test**
+
+```go
+// A gopher appears on the quiet screens and never on the round.
+assert.Contains(t, errorHTML, `class="gopher`)
+assert.NotContains(t, questionHTML, `class="gopher`)
+```
+
+- [ ] **Step 2: Run it and watch it fail**
+
+Run: `go test ./web/views/pages/ -v` — FAIL, no gopher exists.
+
+- [ ] **Step 3: Draw the gopher**
+
+An inline SVG component in the site's palette, built from the existing tokens.
+Two or three poses is enough. It is a mark in this product's world, not the
+Go mascot copied — keep it simple enough to read at 40px.
+
+- [ ] **Step 4: Set them running where it is quiet**
+
+A CSS keyframe run across the footer, one on the 404, one in the empty state, and
+one that scampers across the answer screen after a guess is scored. Transform and
+opacity only — no layout properties — so nothing re-lays-out per frame.
+
+- [ ] **Step 5: Respect reduced motion**
+
+The stylesheet's `prefers-reduced-motion` block already parks animations globally.
+Confirm the gophers are still *visible* when parked rather than mid-run off-screen:
+a reduced-motion visitor should see a gopher standing still, not an empty strip.
+
+- [ ] **Step 6: Verify and commit**
+
+Run the suite and the detector
+(`"<skill-base-dir>/scripts/impeccable" detect --json web/views web/assets`),
+and confirm no new findings.
+
+```bash
+git add web/ && git commit -m "feat: a few gophers, where the page is quiet"
+```
